@@ -1,134 +1,77 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Commanda – Automatisation Instagram</title>
-
-  <!-- Polices & feuilles de style -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commanda – Réponses Insta automatiques</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
 
-<!-- ========== HEADER ========== -->
-<header class="site-header">
-  <h1 class="logo">Commanda</h1>
-  <nav class="main-nav">
-    <a href="#features">Fonctionnalités</a>
-    <a href="#pricing">Tarifs</a>
-    <a href="signup.html" class="cta-nav">Sign up</a>
-  </nav>
-</header>
+  <!-- Hero -->
+  <section class="hero">
+    <h1 class="reveal">Automatise tes réponses Insta ⚡</h1>
+    <p class="reveal">Commanda répond à tes commentaires en moins de 2 minutes. Boost ton engagement, sans lever le petit doigt.</p>
+  </section>
 
-<!-- ========== HERO ========== -->
-<section class="hero-section">
-  <canvas id="gradient-canvas"></canvas>
-
-  <div class="hero-content">
-    <h2 class="hero-title anim-fade">Automatise tes réponses Instagram <span class="highlight">en 2 minutes</span></h2>
-    <p class="hero-sub anim-fade anim-delay-sm">24h/24 – 7j/7, gère tes commentaires pendant que tu dors.</p>
-
-    <ul class="hero-list anim-fade anim-delay-md">
-      <li>10 commentaires / post</li>
-      <li>Dashboard multi‑clients</li>
-      <li>Essai gratuit 7 jours</li>
-    </ul>
-
-    <a href="signup.html" class="cta-button anim-scale anim-delay-lg">Commencer</a>
-  </div>
-</section>
-
-<!-- ========== FEATURES ========== -->
-<section id="features" class="features-section">
-  <h2 class="section-title anim-fade">Fonctionnalités clés</h2>
-
-  <div class="features">
-    <div class="feature anim-up">
-      <h3>⏱ Ultra‑rapide</h3>
-      <p>Réponse générée en &lt; 2 min, 24h/24.</p>
+  <!-- Features -->
+  <section class="container reveal">
+    <h2>Fonctionnalités clés</h2>
+    <div class="features">
+      <div class="feature-card">
+        <h3>Réponses instantanées</h3>
+        <p>Commanda répond automatiquement aux premiers commentaires dans les 2 minutes après post.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Personnalisation avancée</h3>
+        <p>Choisis le ton (fun, pro, girly...) et ajoute tes mots-clés pour une expérience 100% sur mesure.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Support multi‑comptes</h3>
+        <p>Gère jusqu'à 5 comptes Instagram via une seule interface. Idéal pour freelances & agences.</p>
+      </div>
     </div>
+  </section>
 
-    <div class="feature anim-up anim-delay-sm">
-      <h3>💬 10 com/post</h3>
-      <p>Quota intelligent et personnalisable.</p>
+  <!-- Pricing -->
+  <section class="container reveal">
+    <h2>Nos offres</h2>
+    <div class="pricing-table">
+      <div class="price-card">
+        <h3>Free</h3>
+        <p>7 jours d'essai • 1 compte • 20 réponses</p>
+        <p><strong>0 €</strong></p>
+      </div>
+      <div class="price-card">
+        <h3>Starter</h3>
+        <p>15 jours • 1 compte • 50 réponses</p>
+        <p><strong>6 €</strong></p>
+      </div>
+      <div class="price-card">
+        <h3>Pro</h3>
+        <p>30 jours • 2 comptes • 200 réponses</p>
+        <p><strong>11 €/mois</strong></p>
+      </div>
+      <div class="price-card">
+        <h3>Premium</h3>
+        <p>Illimité • 5 comptes • Support inclus</p>
+        <p><strong>17 €/mois</strong></p>
+      </div>
+      <div class="price-card">
+        <h3>Pack SMM</h3>
+        <p>Pour agences • illimité + posts auto</p>
+        <p><strong>49 €/mois</strong></p>
+      </div>
     </div>
+  </section>
 
-    <div class="feature anim-up anim-delay-md">
-      <h3>📊 Dashboard</h3>
-      <p>Pilote tous tes comptes depuis un seul espace.</p>
-    </div>
-  </div>
-</section>
+  <!-- Footer -->
+  <footer class="reveal">
+    © 2025 Commanda – Propulsé par l’automatisation et un peu de café.
+  </footer>
 
-<!-- ========== PRICING ========== -->
-<section id="pricing" class="pricing-section">
-  <h2 class="section-title anim-fade">Nos offres</h2>
-
-  <!-- Free Plan -->
-  <div class="card card-free anim-scale">
-    <h3>🟢 Free Plan</h3>
-    <p class="price">0 € – Essai 7 jours</p>
-    <ul>
-      <li>1 compte IG</li>
-      <li>20 posts</li>
-      <li>10 com/post</li>
-    </ul>
-  </div>
-
-  <!-- Paid Plans -->
-  <div class="pricing-cards">
-    <div class="card anim-up">
-      <h3>🟨 Starter</h3>
-      <p class="price">6 € / 2 sem.</p>
-      <ul>
-        <li>1 compte IG</li>
-        <li>10 posts / sem.</li>
-        <li>10 com/post</li>
-      </ul>
-    </div>
-
-    <div class="card highlight-card anim-up anim-delay-sm">
-      <h3>🗭 Pro</h3>
-      <p class="price">11 € / mois</p>
-      <ul>
-        <li>1 compte IG</li>
-        <li>10 posts / sem.</li>
-        <li>Dashboard perso</li>
-      </ul>
-    </div>
-
-    <div class="card anim-up anim-delay-md">
-      <h3>🔴 Premium</h3>
-      <p class="price">17 € / mois</p>
-      <ul>
-        <li>1 compte IG</li>
-        <li>50 posts / mois</li>
-        <li>Quotas flexibles</li>
-      </ul>
-    </div>
-
-    <div class="card anim-up anim-delay-lg">
-      <h3>🛋️ Pack SMM</h3>
-      <p class="price">49 € / mois</p>
-      <ul>
-        <li>5 comptes IG</li>
-        <li>Posts & com illimités</li>
-        <li>Support prioritaire</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<!-- ========== FOOTER ========== -->
-<footer class="site-footer">
-  © 2025 — Commanda. Tous droits réservés.
-</footer>
-
-<!-- ========== SCRIPTS ========== -->
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
