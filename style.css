@@ -136,3 +136,34 @@ footer {
     font-size: 1rem;
   }
 }
+.cta-button {
+  margin-top: 2rem;
+  display: inline-block;
+  background: #fff;
+  color: #0f0f0f;
+  padding: 1rem 2rem;
+  border-radius: 2rem;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: transform 0.25s ease-out, background 0.25s ease-out;
+}
+.cta-button:hover {
+  transform: scale(1.05);
+  background: #eaeaea;
+}
+
+.cta-inline {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: #fff;
+  color: #0f0f0f;
+  border-radius: 2rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 0.25s ease-out, background 0.25s ease-out;
+}
+.cta-inline:hover {
+  transform: scale(1.05);
+  background: #e0e0e0;
+}
