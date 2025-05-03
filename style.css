@@ -365,3 +365,24 @@ footer a {
 .card .btn:hover {
   background: #eaeaea;
 }
+.card.green {
+  border: 2px solid #00FFAA;
+  box-shadow: 0 0 12px #00FFAA55;
+}
+/* Carte spéciale verte pour Free */
+.card.green {
+  border: 2px solid #00FFAA;
+  box-shadow: 0 0 15px #00FFAA55;
+}
+
+/* Pour harmoniser la hauteur des blocs prix */
+.card .price {
+  margin-top: auto;
+  font-weight: bold;
+  font-size: 1.3rem;
+}
+
+/* Supprime les boutons dans les offres */
+.card .btn {
+  display: none;
+}
