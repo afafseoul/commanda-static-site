@@ -1,5 +1,5 @@
 /* ---------------------------------
-   🧼 RESET / BASE
+   ðŸ§¼ RESET / BASE
 ---------------------------------- */
 * {
   margin: 0;
@@ -23,7 +23,7 @@ button {
 }
 
 /* ---------------------------------
-   🔝 HEADER STICKY
+   ðŸ” HEADER STICKY
 ---------------------------------- */
 .header {
   position: sticky;
@@ -58,7 +58,7 @@ button {
 }
 
 /* ---------------------------------
-   🎬 HERO SECTION + CTA
+   ðŸŽ¬ HERO SECTION + CTA
 ---------------------------------- */
 .hero {
   display: flex;
@@ -92,6 +92,8 @@ button {
   font-weight: 700;
   font-size: 1rem;
   transition: transform 0.25s ease-out, background 0.25s ease-out;
+  white-space: nowrap;
+  text-align: center;
 }
 .cta-button:hover {
   transform: scale(1.05);
@@ -104,7 +106,7 @@ button {
 }
 
 /* ---------------------------------
-   ✅ CHECKLIST (features)
+   âœ… CHECKLIST (features)
 ---------------------------------- */
 .checklist {
   list-style: none;
@@ -126,7 +128,7 @@ button {
 }
 
 /* ---------------------------------
-   💰 PRICING (cartes offres)
+   ðŸ’° PRICING (cartes offres)
 ---------------------------------- */
 .pricing-table {
   display: flex;
@@ -173,7 +175,7 @@ button {
   background: #e0e0e0;
 }
 
-/* 🎨 Couleurs différenciées par offre */
+/* ðŸŽ¨ Couleurs diffÃ©renciÃ©es par offre */
 .price-card.free     { background: #142618; border-left: 4px solid #00ff88; }
 .price-card.starter  { background: #1d1f2a; border-left: 4px solid #6666ff; }
 .price-card.pro      { background: #221818; border-left: 4px solid #ff4444; }
@@ -181,7 +183,7 @@ button {
 .price-card.smm      { background: #2a1a27; border-left: 4px solid #ff77cc; }
 
 /* ---------------------------------
-   📦 SECTIONS / CONTAINERS
+   ðŸ“¦ SECTIONS / CONTAINERS
 ---------------------------------- */
 .container {
   max-width: 1200px;
@@ -197,7 +199,7 @@ h1, h2, h3 {
 }
 
 /* ---------------------------------
-   👣 FOOTER
+   ðŸ‘£ FOOTER
 ---------------------------------- */
 footer {
   text-align: center;
@@ -212,7 +214,7 @@ footer a {
 }
 
 /* ---------------------------------
-   👀 SCROLL-REVEAL ANIMATIONS
+   ðŸ‘€ SCROLL-REVEAL ANIMATIONS
 ---------------------------------- */
 .reveal {
   opacity: 0;
@@ -225,7 +227,7 @@ footer a {
 }
 
 /* ---------------------------------
-   📱 RESPONSIVE
+   ðŸ“± RESPONSIVE
 ---------------------------------- */
 @media (max-width: 768px) {
   .hero h1 {
@@ -289,9 +291,12 @@ footer a {
   text-align: center;
 }
 
-.pricing-section .section-title {
+.pricing-section .section-title,
+.free-section .section-title {
   font-size: 2.5rem;
   margin-bottom: 40px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .pricing-cards {
@@ -340,9 +345,11 @@ footer a {
 }
 
 .card .price {
-  font-size: 1.3rem;
+  margin-top: auto;
   font-weight: bold;
-  margin-bottom: 20px;
+  font-size: 1.4rem;
+  min-height: 40px;
+  line-height: 1.4;
 }
 
 .card .price span {
@@ -369,7 +376,7 @@ footer a {
   border: 2px solid #00FFAA;
   box-shadow: 0 0 12px #00FFAA55;
 }
-/* Carte spéciale verte pour Free */
+/* Carte spÃ©ciale verte pour Free */
 .card.green {
   border: 2px solid #00FFAA;
   box-shadow: 0 0 15px #00FFAA55;
@@ -379,7 +386,9 @@ footer a {
 .card .price {
   margin-top: auto;
   font-weight: bold;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
+  min-height: 40px;
+  line-height: 1.4;
 }
 
 /* Supprime les boutons dans les offres */
@@ -434,7 +443,7 @@ footer a {
   100% { opacity: 1; }
 }
 
-/* Spécificité verte pour la carte Free */
+/* SpÃ©cificitÃ© verte pour la carte Free */
 .card.green {
   border: 1px solid #00ff99;
   box-shadow: 0 0 12px #00ff99;
@@ -573,15 +582,17 @@ footer a {
 }
 
 .cta-button {
+  margin-top: 2rem;
   display: inline-block;
-  padding: 12px 0;
-  background: white;
-  color: black;
-  font-weight: 600;
-  border: none;
-  border-radius: 100px;
-  cursor: pointer;
-  transition: background 0.3s ease;
+  background: #fff;
+  color: #0f0f0f;
+  padding: 1rem 2rem;
+  border-radius: 2rem;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: transform 0.25s ease-out, background 0.25s ease-out;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .cta-button:hover {
