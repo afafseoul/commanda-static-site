@@ -56,6 +56,20 @@ button {
   font-weight: 600;
   font-size: 0.95rem;
 }
+.cta-header {
+  background: white;
+  color: black;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background 0.3s ease;
+}
+.cta-header:hover {
+  background: #eaeaea;
+}
+
 
 /* ---------------------------------
    ðŸŽ¬ HERO SECTION + CTA
