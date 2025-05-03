@@ -1,4 +1,6 @@
-/* ----- RESET / BASE ----- */
+/* ---------------------------------
+   🧼 RESET / BASE
+---------------------------------- */
 * {
   margin: 0;
   padding: 0;
@@ -20,21 +22,44 @@ button {
   transition: transform 0.25s ease-out, opacity 0.25s ease-out;
 }
 
-/* ----- LAYOUT ----- */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+/* ---------------------------------
+   🔝 HEADER STICKY
+---------------------------------- */
+.header {
+  position: sticky;
+  top: 0;
+  background: #0f0f0f;
+  padding: 1.2rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #222;
+  z-index: 1000;
 }
-section {
-  padding: 6rem 0;
+.logo {
+  font-weight: bold;
+  font-size: 1.3rem;
 }
-h1, h2, h3 {
-  font-weight: 700;
-  margin-bottom: 1.2rem;
+.nav {
+  display: flex;
+  gap: 1rem;
+}
+.nav-link {
+  color: #aaa;
+  font-size: 0.95rem;
+}
+.nav-button {
+  background: #fff;
+  color: #000;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
-/* ----- HERO SECTION ----- */
+/* ---------------------------------
+   🎬 HERO SECTION + CTA
+---------------------------------- */
 .hero {
   display: flex;
   flex-direction: column;
@@ -57,34 +82,60 @@ h1, h2, h3 {
   margin: 0 auto;
   opacity: 0.9;
 }
+.cta-button {
+  margin-top: 2rem;
+  display: inline-block;
+  background: #fff;
+  color: #0f0f0f;
+  padding: 1rem 2rem;
+  border-radius: 2rem;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: transform 0.25s ease-out, background 0.25s ease-out;
+}
+.cta-button:hover {
+  transform: scale(1.05);
+  background: #eaeaea;
+}
 @keyframes gradientMove {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
-/* ----- FEATURES ----- */
-.features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
-  margin-top: 3rem;
+/* ---------------------------------
+   ✅ CHECKLIST (features)
+---------------------------------- */
+.checklist {
+  list-style: none;
+  padding: 2rem 0;
+  max-width: 700px;
+  margin: 0 auto;
 }
-.feature-card {
-  background: #1a1a1a;
-  border-radius: 1rem;
-  padding: 2rem;
+.check-item {
+  padding: 0.8rem 1rem;
+  border-left: 4px solid #00ff99;
+  background: #1c1c1c;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
   transition: transform 0.25s ease-out;
 }
-.feature-card:hover {
-  transform: translateY(-8px);
+.check-item:hover {
+  transform: scale(1.02);
 }
 
-/* ----- PRICING ----- */
+/* ---------------------------------
+   💰 PRICING (cartes offres)
+---------------------------------- */
 .pricing-table {
   display: flex;
   flex-wrap: wrap;
   gap: 2rem;
+  justify-content: center;
+  margin-top: 3rem;
+}
+.pricing-table.solo {
   justify-content: center;
 }
 .price-card {
@@ -104,54 +155,8 @@ h1, h2, h3 {
 }
 .price-card p {
   font-size: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.8rem;
 }
-
-/* ----- FOOTER ----- */
-footer {
-  text-align: center;
-  padding: 2rem;
-  background: #111;
-  font-size: 0.9rem;
-  color: #aaa;
-}
-
-/* ----- SCROLL REVEAL ----- */
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.15s ease-out, transform 0.35s ease-out;
-}
-.revealed {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ----- RESPONSIVE ----- */
-@media (max-width: 768px) {
-  .hero h1 {
-    font-size: 2.2rem;
-  }
-  .hero p {
-    font-size: 1rem;
-  }
-}
-.cta-button {
-  margin-top: 2rem;
-  display: inline-block;
-  background: #fff;
-  color: #0f0f0f;
-  padding: 1rem 2rem;
-  border-radius: 2rem;
-  font-weight: 700;
-  font-size: 1rem;
-  transition: transform 0.25s ease-out, background 0.25s ease-out;
-}
-.cta-button:hover {
-  transform: scale(1.05);
-  background: #eaeaea;
-}
-
 .cta-inline {
   display: inline-block;
   margin-top: 1rem;
@@ -166,4 +171,78 @@ footer {
 .cta-inline:hover {
   transform: scale(1.05);
   background: #e0e0e0;
+}
+
+/* 🎨 Couleurs différenciées par offre */
+.price-card.free     { background: #142618; border-left: 4px solid #00ff88; }
+.price-card.starter  { background: #1d1f2a; border-left: 4px solid #6666ff; }
+.price-card.pro      { background: #221818; border-left: 4px solid #ff4444; }
+.price-card.premium  { background: #192427; border-left: 4px solid #00cccc; }
+.price-card.smm      { background: #2a1a27; border-left: 4px solid #ff77cc; }
+
+/* ---------------------------------
+   📦 SECTIONS / CONTAINERS
+---------------------------------- */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+}
+section {
+  padding: 4rem 0;
+}
+h1, h2, h3 {
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+}
+
+/* ---------------------------------
+   👣 FOOTER
+---------------------------------- */
+footer {
+  text-align: center;
+  padding: 2rem;
+  background: #111;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+footer a {
+  color: #fff;
+  font-weight: bold;
+}
+
+/* ---------------------------------
+   👀 SCROLL-REVEAL ANIMATIONS
+---------------------------------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.15s ease-out, transform 0.35s ease-out;
+}
+.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------------------------------
+   📱 RESPONSIVE
+---------------------------------- */
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+  .hero p {
+    font-size: 1rem;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nav {
+    margin-top: 0.5rem;
+  }
+  .pricing-table {
+    flex-direction: column;
+    align-items: center;
+  }
 }

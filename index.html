@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -10,6 +9,15 @@
 </head>
 <body>
 
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">Commanda</div>
+    <nav class="nav">
+      <a href="login.html" class="nav-link">Connexion</a>
+      <a href="signup.html" class="nav-button">S’inscrire</a>
+    </nav>
+  </header>
+
   <!-- Hero -->
   <section class="hero">
     <h1 class="reveal">Automatise tes réponses Insta ⚡</h1>
@@ -17,54 +25,54 @@
     <a href="signup.html" class="cta-button reveal">Commencer maintenant</a>
   </section>
 
-  <!-- Features -->
+  <!-- Fonctionnalités -->
   <section class="container reveal">
     <h2>Fonctionnalités clés</h2>
-    <div class="features">
-      <div class="feature-card">
-        <h3>Réponses instantanées</h3>
-        <p>Commanda répond automatiquement aux premiers commentaires dans les 2 minutes après post.</p>
-      </div>
-      <div class="feature-card">
-        <h3>Personnalisation avancée</h3>
-        <p>Choisis le ton (fun, pro, girly...) et ajoute tes mots-clés pour une expérience 100% sur mesure.</p>
-      </div>
-      <div class="feature-card">
-        <h3>Support multi‑comptes</h3>
-        <p>Gère jusqu'à 5 comptes Instagram via une seule interface. Idéal pour freelances & agences.</p>
-      </div>
-    </div>
+    <ul class="checklist">
+      <li class="check-item reveal">⚡ Réponses automatiques en <strong>< 2 minutes</strong> après post</li>
+      <li class="check-item reveal">🎯 Personnalisation du ton (fun, pro, girly...)</li>
+      <li class="check-item reveal">🔄 Gestion de plusieurs comptes Instagram</li>
+      <li class="check-item reveal">🧠 IA optimisée pour chaque commentaire</li>
+      <li class="check-item reveal">📊 Suivi automatique des performances</li>
+    </ul>
   </section>
 
-  <!-- Pricing -->
+  <!-- Offre Free seule -->
   <section class="container reveal">
-    <h2>Nos offres</h2>
-    <div class="pricing-table">
-      <div class="price-card">
+    <h2>Découvre gratuitement</h2>
+    <div class="pricing-table solo">
+      <div class="price-card free">
         <h3>Free</h3>
         <p>7 jours d'essai • 1 compte • 20 réponses</p>
         <p><strong>0 €</strong></p>
         <a href="signup.html" class="cta-inline">Essayer</a>
       </div>
-      <div class="price-card">
+    </div>
+  </section>
+
+  <!-- Pricing principaux -->
+  <section class="container reveal">
+    <h2>Plans mensuels</h2>
+    <div class="pricing-table">
+      <div class="price-card starter">
         <h3>Starter</h3>
         <p>15 jours • 1 compte • 50 réponses</p>
         <p><strong>6 €</strong></p>
         <a href="signup.html" class="cta-inline">Commencer</a>
       </div>
-      <div class="price-card">
+      <div class="price-card pro">
         <h3>Pro</h3>
         <p>30 jours • 2 comptes • 200 réponses</p>
         <p><strong>11 €/mois</strong></p>
         <a href="signup.html" class="cta-inline">Commencer</a>
       </div>
-      <div class="price-card">
+      <div class="price-card premium">
         <h3>Premium</h3>
         <p>Illimité • 5 comptes • Support inclus</p>
         <p><strong>17 €/mois</strong></p>
         <a href="signup.html" class="cta-inline">Commencer</a>
       </div>
-      <div class="price-card">
+      <div class="price-card smm">
         <h3>Pack SMM</h3>
         <p>Pour agences • illimité + posts auto</p>
         <p><strong>49 €/mois</strong></p>
@@ -75,7 +83,7 @@
 
   <!-- Footer -->
   <footer class="reveal">
-    © 2025 Commanda – Propulsé par l’automatisation et un peu de café.
+    © 2025 Commanda – <a href="signup.html">Commence gratuitement</a>
   </footer>
 
   <script src="script.js"></script>
