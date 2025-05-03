@@ -2,114 +2,78 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inscription – Commanda</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    body.signup-body {
-      margin: 0;
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #00bfa6, #007acc);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      max-width: 100%;
-      overflow-x: hidden;
-    }
 
-    .signup-card {
-      background: #fff;
-      border-radius: 1rem;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-      padding: 3rem 2.5rem;
-      text-align: center;
-      width: 100%;
-      max-width: 400px;
-      animation: fadeUp 0.6s ease-out;
-    }
-
-    .signup-card h1 {
-      font-size: 2rem;
-      margin-bottom: 2rem;
-      color: #00bfa6;
-    }
-
-    .signup-form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .signup-form input {
-      padding: 0.8rem;
-      font-size: 1rem;
-      border: 1px solid #ddd;
-      border-radius: 0.5rem;
-      transition: border 0.2s;
-    }
-
-    .signup-form input:focus {
-      outline: none;
-      border-color: #00bfa6;
-    }
-
-    .signup-form button {
-      background-color: #00bfa6;
-      color: white;
-      padding: 0.8rem;
-      border: none;
-      border-radius: 0.5rem;
-      font-weight: bold;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
-    }
-
-    .signup-form button:hover {
-      background-color: #009e8c;
-      transform: scale(1.02);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    }
-
-    .login-link {
-      margin-top: 1.5rem;
-      font-size: 0.95rem;
-    }
-
-    .login-link a {
-      color: #007acc;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .login-link a:hover {
-      text-decoration: underline;
-    }
-
-    @keyframes fadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(40px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  </style>
+  <!-- Fonts + Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body class="signup-body">
-  <div class="signup-card">
-    <h1>Créer un compte</h1>
-    <form class="signup-form">
-      <input type="email" placeholder="Adresse email" required />
-      <input type="password" placeholder="Mot de passe" required />
-      <button type="submit">S'inscrire</button>
+
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="site-header">
+    <h1 class="logo">Commanda</h1>
+    <nav class="main-nav">
+      <a href="index.html#features">Fonctionnalités</a>
+      <a href="index.html#pricing">Tarifs</a>
+      <a href="login.html" class="cta-nav">Sign in</a>
+    </nav>
+  </header>
+
+  <!-- ===== SIGN‑UP FORM ===== -->
+  <main class="auth-section fade-up">
+    <form class="auth-box" id="signup-form" novalidate>
+      <h2 class="auth-title">Créer mon compte</h2>
+
+      <div class="form-field">
+        <label for="fullname">Nom complet</label>
+        <input id="fullname" name="fullname" type="text" placeholder="Jean Dupont" required />
+        <span class="error-msg" aria-live="polite"></span>
+      </div>
+
+      <div class="form-field">
+        <label for="email">E‑mail</label>
+        <input id="email" name="email" type="email" placeholder="jean@exemple.com" required />
+        <span class="error-msg" aria-live="polite"></span>
+      </div>
+
+      <div class="form-field">
+        <label for="password">Mot de passe</label>
+        <input id="password" name="password" type="password" placeholder="********" minlength="8" required />
+        <span class="error-msg" aria-live="polite"></span>
+      </div>
+
+      <div class="form-field checkbox-field">
+        <input id="cgu" type="checkbox" required />
+        <label for="cgu">J’accepte les <a href="#">CGU</a></label>
+      </div>
+
+      <button type="submit" class="cta-button full-width">Créer mon compte</button>
+
+      <p class="alt-link">Déjà inscrit ? <a href="login.html">Se connecter</a></p>
     </form>
-    <div class="login-link">
-      Déjà inscrit ? <a href="login.html">Se connecter</a>
-    </div>
-  </div>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">© 2025 — Commanda. Tous droits réservés.</footer>
+
+  <!-- ===== MINI VALIDATION JS ===== -->
+  <script>
+  // Affiche les messages d'erreur HTML5 dans les <span class="error-msg">
+  document.getElementById('signup-form').addEventListener('submit', function (e) {
+    const form = e.target;
+    if (!form.checkValidity()) {
+      e.preventDefault();
+      Array.from(form.elements).forEach(el => {
+        const msg = el.parentElement.querySelector('.error-msg');
+        if (msg) msg.textContent = el.validationMessage;
+      });
+    }
+  });
+  </script>
 </body>
 </html>
