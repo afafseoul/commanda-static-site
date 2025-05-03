@@ -386,3 +386,56 @@ footer a {
 .card .btn {
   display: none;
 }
+.pricing-cards {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  background-color: #111;
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 0 0 transparent;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+}
+
+.price-wrapper {
+  margin-top: auto;
+  padding-top: 1.5rem;
+}
+
+.price {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #888;
+}
+
+.price.highlight {
+  color: #ffffff;
+  background: linear-gradient(to right, #00ffe0, #6b73ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: glow 2s infinite ease-in-out;
+}
+
+@keyframes glow {
+  0% { opacity: 1; }
+  50% { opacity: 0.85; }
+  100% { opacity: 1; }
+}
+
+/* Spécificité verte pour la carte Free */
+.card.green {
+  border: 1px solid #00ff99;
+  box-shadow: 0 0 12px #00ff99;
+}
