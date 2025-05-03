@@ -9,81 +9,80 @@
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- Header sticky -->
   <header class="header">
     <div class="logo">Commanda</div>
-    <nav class="nav">
-      <a href="login.html" class="nav-link">Connexion</a>
-      <a href="signup.html" class="nav-button">S’inscrire</a>
+    <nav>
+      <a href="#features">Fonctionnalités</a>
+      <a href="#pricing">Offres</a>
+      <a href="login.html" class="btn-nav">Connexion</a>
+      <a href="signup.html" class="btn-nav primary">S’inscrire</a>
     </nav>
   </header>
 
   <!-- Hero -->
-  <section class="hero">
-    <h1 class="reveal">Automatise tes réponses Insta ⚡</h1>
-    <p class="reveal">Commanda répond à tes commentaires en moins de 2 minutes. Boost ton engagement, sans lever le petit doigt.</p>
-    <a href="signup.html" class="cta-button reveal">Commencer maintenant</a>
-  </section>
-
-  <!-- Fonctionnalités -->
-  <section class="container reveal">
-    <h2>Fonctionnalités clés</h2>
-    <ul class="checklist">
-      <li class="check-item reveal">⚡ Réponses automatiques en <strong>< 2 minutes</strong> après post</li>
-      <li class="check-item reveal">🎯 Personnalisation du ton (fun, pro, girly...)</li>
-      <li class="check-item reveal">🔄 Gestion de plusieurs comptes Instagram</li>
-      <li class="check-item reveal">🧠 IA optimisée pour chaque commentaire</li>
-      <li class="check-item reveal">📊 Suivi automatique des performances</li>
-    </ul>
-  </section>
-
-  <!-- Offre Free seule -->
-  <section class="container reveal">
-    <h2>Découvre gratuitement</h2>
-    <div class="pricing-table solo">
-      <div class="price-card free">
-        <h3>Free</h3>
-        <p>7 jours d'essai • 1 compte • 20 réponses</p>
-        <p><strong>0 €</strong></p>
-        <a href="signup.html" class="cta-inline">Essayer</a>
-      </div>
+  <section class="hero" id="home">
+    <div class="hero-content">
+      <h1>Automatise tes réponses Insta ⚡</h1>
+      <p>Commanda répond automatiquement aux commentaires Instagram en moins de 2 minutes. Tu postes, on gère.</p>
+      <a href="#features" class="btn-scroll">Découvrir ↓</a>
     </div>
   </section>
 
-  <!-- Pricing principaux -->
-  <section class="container reveal">
-    <h2>Plans mensuels</h2>
-    <div class="pricing-table">
-      <div class="price-card starter">
+  <!-- Fonctionnalités -->
+  <section id="features" class="section fade-in">
+    <h2>Fonctionnalités clés</h2>
+    <div class="grid-features">
+      <div class="card-feature">⚡ Réponse automatique en <strong>< 2 min</strong></div>
+      <div class="card-feature">🎯 Ton personnalisé (fun, pro, girly…)</div>
+      <div class="card-feature">🔄 Multi-comptes Instagram</div>
+      <div class="card-feature">🧠 IA intelligente par post</div>
+      <div class="card-feature">📊 Statistiques & suivi intégré</div>
+      <div class="card-feature">🛠️ Paramétrage simple depuis ton dashboard</div>
+    </div>
+  </section>
+
+  <!-- Offres -->
+  <section id="pricing" class="section fade-in">
+    <h2>Nos Offres</h2>
+    <div class="grid-pricing">
+      <div class="card-plan highlight">
+        <h3>Free</h3>
+        <p>7 jours d’essai • 1 compte • 20 réponses</p>
+        <strong>0 €</strong>
+        <a href="signup.html" class="btn-plan">Essayer</a>
+      </div>
+      <div class="card-plan">
         <h3>Starter</h3>
         <p>15 jours • 1 compte • 50 réponses</p>
-        <p><strong>6 €</strong></p>
-        <a href="signup.html" class="cta-inline">Commencer</a>
+        <strong>6 €</strong>
+        <a href="signup.html" class="btn-plan">Commencer</a>
       </div>
-      <div class="price-card pro">
+      <div class="card-plan">
         <h3>Pro</h3>
         <p>30 jours • 2 comptes • 200 réponses</p>
-        <p><strong>11 €/mois</strong></p>
-        <a href="signup.html" class="cta-inline">Commencer</a>
+        <strong>11 €/mois</strong>
+        <a href="signup.html" class="btn-plan">Commencer</a>
       </div>
-      <div class="price-card premium">
+      <div class="card-plan">
         <h3>Premium</h3>
         <p>Illimité • 5 comptes • Support inclus</p>
-        <p><strong>17 €/mois</strong></p>
-        <a href="signup.html" class="cta-inline">Commencer</a>
+        <strong>17 €/mois</strong>
+        <a href="signup.html" class="btn-plan">Commencer</a>
       </div>
-      <div class="price-card smm">
+      <div class="card-plan">
         <h3>Pack SMM</h3>
         <p>Pour agences • illimité + posts auto</p>
-        <p><strong>49 €/mois</strong></p>
-        <a href="signup.html" class="cta-inline">Commencer</a>
+        <strong>49 €/mois</strong>
+        <a href="signup.html" class="btn-plan">Commencer</a>
       </div>
     </div>
   </section>
 
   <!-- Footer -->
-  <footer class="reveal">
-    © 2025 Commanda – <a href="signup.html">Commence gratuitement</a>
+  <footer>
+    <p>© 2025 Commanda. Design soigné, service automatisé.</p>
+    <a href="signup.html" class="btn-footer">Créer un compte</a>
   </footer>
 
   <script src="script.js"></script>
