@@ -1,53 +1,45 @@
 /* ========= 1. HERO GRADIENT CANVAS ========= */
-/* simple animated gradient inspired by CSS-Tricks  */
-const c = document.getElementById('gradient-canvas');
-const ctx = c.getContext('2d');
+const canvas = document.getElementById('gradient-canvas');
+const ctx = canvas.getContext('2d');
 let w, h, t = 0;
-function resize(){ w = c.width = window.innerWidth; h = c.height = window.innerHeight }
-resize(); window.addEventListener('resize', resize);
 
-function draw(){
-  t += .003;
-  for(let i=0;i<h;i++){
-    const gradient = Math.floor(128 + 128 * Math.sin(i*0.02 + t));
-    ctx.fillStyle = `rgb(${gradient},${255-gradient},${200})`;
-    ctx.fillRect(0,i,w,1);
+function resize() {
+  w = canvas.width  = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function draw() {
+  t += 0.003;
+  for (let i = 0; i < h; i++) {
+    const g = Math.floor(128 + 128 * Math.sin(i * 0.02 + t));
+    ctx.fillStyle = `rgb(${g}, ${255 - g}, 200)`;
+    ctx.fillRect(0, i, w, 1);
   }
   requestAnimationFrame(draw);
 }
 draw();
 
-/* ========= 2. SCROLL REVEAL with IntersectionObserver ========= */
-const observer = new IntersectionObserver((entries)=>{
-  entries.forEach(entry=>{
-    if(entry.isIntersecting){
-      entry.target.classList.add('anim-show');
-      observer.unobserve(entry.target);
+/* ========= 2. SCROLL‑REVEAL ========= */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('anim-show');
+      observer.unobserve(e.target);
     }
   });
-},{threshold:.15});
+}, { threshold: 0.15 });
 
-document.querySelectorAll('.anim-fade, .anim-up, .anim-scale').forEach(el=>observer.observe(el));
-/* ========= 2. SCROLL REVEAL with IntersectionObserver ========= */
-const observer = new IntersectionObserver((entries)=>{
-    entries.forEach(entry=>{
-      if(entry.isIntersecting){
-        entry.target.classList.add('anim-show');
-        observer.unobserve(entry.target);
-      }
-    });
-  },{threshold:.15});
-  
-  document.querySelectorAll('.anim-fade, .anim-up, .anim-scale')
-          .forEach(el=>observer.observe(el));
-  
-  /* ===  NEW: révéler aussitôt les éléments déjà dans le viewport  === */
-  function revealInitial(){
-    document.querySelectorAll('.anim-fade, .anim-up, .anim-scale').forEach(el=>{
-      const r = el.getBoundingClientRect();
-      if (r.top < window.innerHeight * .85) el.classList.add('anim-show');
-    });
-  }
-  revealInitial();                // au 1er chargement
-  window.addEventListener('resize', revealInitial);   // si viewport change
-  
+const revealables = document.querySelectorAll('.anim-fade, .anim-up, .anim-scale');
+revealables.forEach(el => observer.observe(el));
+
+/* == Révéler immédiatement ce qui est déjà dans le viewport (ex : ancre #features) == */
+function revealInitial() {
+  revealables.forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (r.top < window.innerHeight * 0.85) el.classList.add('anim-show');
+  });
+}
+revealInitial();
+window.addEventListener('resize', revealInitial);
