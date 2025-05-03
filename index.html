@@ -1,116 +1,134 @@
-<!-- v0.1 pipeline test -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Commanda – Automatisation Instagram</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Commanda – Automatisation Instagram</title>
+
+  <!-- Polices & feuilles de style -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
 </head>
-<body class="home-body">
-  <header class="site-header">
-    <h1 class="logo">Commanda</h1>
-    <nav class="main-nav">
-      <a href="#features">Fonctionnalités</a>
-      <a href="#pricing">Tarifs</a>
-      <a href="signup.html" class="cta-nav">Sign in</a>
-    </nav>
-  </header>
 
-  <section class="hero-section">
-    <div class="hero-box">
-      <h2>Bienvenue sur <span class="highlight">Commanda</span></h2>
-      <p>Réponses Instagram automatisées en moins de 2 minutes.</p>
-      <ul class="no-bullets">
-        <li><strong>24h/24 – 7j/7</strong></li>
-        <li><strong>10 commentaires max / post</strong></li>
-        <li><strong>Dashboard multi-clients</strong></li>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="site-header">
+  <h1 class="logo">Commanda</h1>
+  <nav class="main-nav">
+    <a href="#features">Fonctionnalités</a>
+    <a href="#pricing">Tarifs</a>
+    <a href="signup.html" class="cta-nav">Sign up</a>
+  </nav>
+</header>
+
+<!-- ========== HERO ========== -->
+<section class="hero-section">
+  <canvas id="gradient-canvas"></canvas>
+
+  <div class="hero-content">
+    <h2 class="hero-title anim-fade">Automatise tes réponses Instagram <span class="highlight">en 2 minutes</span></h2>
+    <p class="hero-sub anim-fade anim-delay-sm">24h/24 – 7j/7, gère tes commentaires pendant que tu dors.</p>
+
+    <ul class="hero-list anim-fade anim-delay-md">
+      <li>10 commentaires / post</li>
+      <li>Dashboard multi‑clients</li>
+      <li>Essai gratuit 7 jours</li>
+    </ul>
+
+    <a href="signup.html" class="cta-button anim-scale anim-delay-lg">Commencer</a>
+  </div>
+</section>
+
+<!-- ========== FEATURES ========== -->
+<section id="features" class="features-section">
+  <h2 class="section-title anim-fade">Fonctionnalités clés</h2>
+
+  <div class="features">
+    <div class="feature anim-up">
+      <h3>⏱ Ultra‑rapide</h3>
+      <p>Réponse générée en &lt; 2 min, 24h/24.</p>
+    </div>
+
+    <div class="feature anim-up anim-delay-sm">
+      <h3>💬 10 com/post</h3>
+      <p>Quota intelligent et personnalisable.</p>
+    </div>
+
+    <div class="feature anim-up anim-delay-md">
+      <h3>📊 Dashboard</h3>
+      <p>Pilote tous tes comptes depuis un seul espace.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PRICING ========== -->
+<section id="pricing" class="pricing-section">
+  <h2 class="section-title anim-fade">Nos offres</h2>
+
+  <!-- Free Plan -->
+  <div class="card card-free anim-scale">
+    <h3>🟢 Free Plan</h3>
+    <p class="price">0 € – Essai 7 jours</p>
+    <ul>
+      <li>1 compte IG</li>
+      <li>20 posts</li>
+      <li>10 com/post</li>
+    </ul>
+  </div>
+
+  <!-- Paid Plans -->
+  <div class="pricing-cards">
+    <div class="card anim-up">
+      <h3>🟨 Starter</h3>
+      <p class="price">6 € / 2 sem.</p>
+      <ul>
+        <li>1 compte IG</li>
+        <li>10 posts / sem.</li>
+        <li>10 com/post</li>
       </ul>
-      <a href="signup.html" class="cta-button">Commencer</a>
-    </div>
-  </section>
-
-  <section id="features" class="features-section">
-    <h2>Fonctionnalités clés</h2>
-    <div class="features">
-      <div class="feature">
-        <h3>⏱ Réponse ultra-rapide</h3>
-        <p>Chaque commentaire reçoit une réponse en <strong>&lt; 2 minutes</strong>, 24h/24 - 7j/7.</p>
-      </div>
-      <div class="feature">
-        <h3>💬 Jusqu’à 10 com/post</h3>
-        <p>Quota intelligent de réponses, personnalisable selon les posts.</p>
-      </div>
-      <div class="feature">
-        <h3>📊 Dashboard pro</h3>
-        <p>Suivi clair des commentaires, réponses et forfaits actifs.</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="pricing" class="pricing-section">
-    <h2>Nos offres</h2>
-
-    <!-- Free Plan à part -->
-    <div class="free-plan">
-      <div class="card card-free">
-        <h3>🟢 Free Plan</h3>
-        <p>0€ – Essai 7 jours</p>
-        <ul class="no-bullets">
-          <li>✔️ 1 compte IG</li>
-          <li>✔️ 20 posts</li>
-          <li>✔️ 10 com/post</li>
-        </ul>
-      </div>
     </div>
 
-    <!-- Les autres offres -->
-    <div class="pricing-cards">
-      <div class="card">
-        <h3>🟨 Starter Beta</h3>
-        <p>6€ / 2 semaines</p>
-        <ul class="no-bullets">
-          <li>✔️ 1 compte IG</li>
-          <li>✔️ 10 posts max/semaine</li>
-          <li>✔️ 10 com/post</li>
-        </ul>
-      </div>
-
-      <div class="card highlight-card">
-        <h3>🗭 Pro Beta</h3>
-        <p>11€ / mois</p>
-        <ul class="no-bullets">
-          <li>✔️ 1 compte IG</li>
-          <li>✔️ 10 posts max/semaine</li>
-          <li>✔️ Dashboard personnalisé</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>🔴 Premium Beta</h3>
-        <p>17€ / mois</p>
-        <ul class="no-bullets">
-          <li>✔️ 1 compte IG</li>
-          <li>✔️ 50 posts/mois</li>
-          <li>✔️ Quotas flexibles</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>🛋️ Pack SMM</h3>
-        <p>49€ / mois</p>
-        <ul class="no-bullets">
-          <li>✔️ Jusqu'à 5 comptes IG</li>
-          <li>✔️ Illimité posts & com</li>
-          <li>✔️ Support prioritaire</li>
-        </ul>
-      </div>
+    <div class="card highlight-card anim-up anim-delay-sm">
+      <h3>🗭 Pro</h3>
+      <p class="price">11 € / mois</p>
+      <ul>
+        <li>1 compte IG</li>
+        <li>10 posts / sem.</li>
+        <li>Dashboard perso</li>
+      </ul>
     </div>
-  </section>
 
-  <footer class="site-footer">
-    <p>© 2025 Commanda. Tous droits réservés.</p>
-  </footer>
+    <div class="card anim-up anim-delay-md">
+      <h3>🔴 Premium</h3>
+      <p class="price">17 € / mois</p>
+      <ul>
+        <li>1 compte IG</li>
+        <li>50 posts / mois</li>
+        <li>Quotas flexibles</li>
+      </ul>
+    </div>
+
+    <div class="card anim-up anim-delay-lg">
+      <h3>🛋️ Pack SMM</h3>
+      <p class="price">49 € / mois</p>
+      <ul>
+        <li>5 comptes IG</li>
+        <li>Posts & com illimités</li>
+        <li>Support prioritaire</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="site-footer">
+  © 2025 — Commanda. Tous droits réservés.
+</footer>
+
+<!-- ========== SCRIPTS ========== -->
+<script src="script.js"></script>
 </body>
 </html>
