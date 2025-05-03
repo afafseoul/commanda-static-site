@@ -202,3 +202,27 @@ section {
     font-size: 0.95rem;
   }
 }
+/* Animation de fond */
+.animated-bg {
+  background: linear-gradient(-45deg, #1a1aff, #ff00ff, #00ffff, #1a1aff);
+  background-size: 400% 400%;
+  animation: gradientAnim 8s ease infinite;
+}
+
+/* Header sticky avec fond animé */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  background: linear-gradient(-45deg, #1a1aff, #ff00ff, #00ffff, #1a1aff);
+  background-size: 400% 400%;
+  animation: gradientAnim 8s ease infinite;
+  backdrop-filter: blur(10px);
+}
+
+/* Animation fluide */
+@keyframes gradientAnim {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
