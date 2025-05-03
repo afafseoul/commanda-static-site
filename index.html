@@ -1,94 +1,91 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Commanda – Automatisation Instagram</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Commanda – Automatise tes réponses Insta ⚡</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="script.js"></script>
+  </head>
+  <body>
+    <!-- 🌈 Fond animé -->
+    <div id="gradient-bg"></div>
 
-  <!-- 🌐 Header -->
-  <header class="header">
-    <div class="logo">Commanda</div>
-    <nav>
-      <a href="#features">Fonctionnalités</a>
-      <a href="#pricing">Offres</a>
-      <a href="login.html" class="btn-nav">Connexion</a>
-      <a href="signup.html" class="btn-nav primary">S’inscrire</a>
-    </nav>
-  </header>
+    <!-- 🔝 Navigation -->
+    <header>
+      <h1 class="logo">Commanda</h1>
+      <nav>
+        <a href="#features">Fonctionnalités</a>
+        <a href="#pricing">Offres</a>
+        <a href="login.html" class="outline">Connexion</a>
+        <a href="signup.html" class="solid">S’inscrire</a>
+      </nav>
+    </header>
 
-  <!-- 🟣 Hero -->
-  <section class="hero">
-    <div class="animated-bg"></div>
-    <div class="hero-content fade-in">
-      <h1>Automatise tes réponses Insta ⚡</h1>
-      <p>Commanda répond automatiquement aux commentaires Instagram en moins de 2 minutes.</p>
-      <a href="#features" class="btn-scroll">Découvrir ↓</a>
-    </div>
-  </section>
-
-  <!-- 🎁 Free Offer -->
-  <section class="section fade-in">
-    <h2>Offre Gratuite</h2>
-    <div class="card-plan highlight free-plan">
-      <h3>Free</h3>
-      <p>7 jours d’essai • 1 compte • 20 réponses</p>
-      <strong>0 €</strong>
-      <a href="signup.html" class="btn-plan">Essayer</a>
-    </div>
-  </section>
-
-  <!-- 🚀 Fonctionnalités -->
-  <section id="features" class="section fade-in">
-    <h2>Fonctionnalités clés</h2>
-    <div class="grid-features">
-      <div class="card-feature">⚡ Réponse automatique <strong>&lt; 2 min</strong></div>
-      <div class="card-feature">🎯 Ton personnalisé (fun, pro, girly…)</div>
-      <div class="card-feature">🔄 Multi-comptes Instagram</div>
-      <div class="card-feature">🧠 IA optimisée pour chaque post</div>
-      <div class="card-feature">📊 Statistiques en temps réel</div>
-      <div class="card-feature">🔐 Sécurité Meta API officielle</div>
-    </div>
-  </section>
-
-  <!-- 💸 Offres -->
-  <section id="pricing" class="section fade-in">
-    <h2>Nos Offres</h2>
-    <div class="grid-pricing">
-      <div class="card-plan">
-        <h3>Starter</h3>
-        <p>15 jours • 1 compte • 50 réponses</p>
-        <strong>6 €</strong>
-        <a href="signup.html" class="btn-plan">Commencer</a>
+    <!-- ✨ Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <h2>Automatise tes réponses Insta ⚡</h2>
+        <p>Commanda répond automatiquement aux commentaires Instagram en moins de 2 minutes.</p>
+        <a href="#features" class="cta">Découvrir ↓</a>
       </div>
-      <div class="card-plan">
-        <h3>Pro</h3>
-        <p>30 jours • 2 comptes • 200 réponses</p>
-        <strong>11 €/mois</strong>
-        <a href="signup.html" class="btn-plan">Commencer</a>
-      </div>
-      <div class="card-plan">
-        <h3>Premium</h3>
-        <p>5 comptes • Réponses illimitées • Support</p>
-        <strong>17 €/mois</strong>
-        <a href="signup.html" class="btn-plan">Commencer</a>
-      </div>
-      <div class="card-plan">
-        <h3>Pack SMM</h3>
-        <p>Pour agences • Illimité + posts auto</p>
-        <strong>49 €/mois</strong>
-        <a href="signup.html" class="btn-plan">Commencer</a>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <footer>
-    <p>© 2025 Commanda — Automatisation simplifiée.</p>
-  </footer>
+    <!-- ⚙️ Fonctionnalités -->
+    <section id="features">
+      <h2>Fonctionnalités clés</h2>
+      <div class="features-grid">
+        <div class="card">⚡ Réponse automatique <strong>&lt; 2 min</strong></div>
+        <div class="card">🍭 Ton personnalisé<br />(fun, pro, girly...)</div>
+        <div class="card">🧠 IA optimisée pour chaque post</div>
+        <div class="card">📊 Statistiques en temps réel</div>
+        <div class="card">🔐 Sécurité Meta API officielle</div>
+        <div class="card">🌐 Multi-comptes Instagram</div>
+      </div>
+    </section>
 
-  <script src="script.js"></script>
-</body>
+    <!-- 🆓 Offre Free à part -->
+    <section id="free-plan">
+      <h2>Offre Gratuite</h2>
+      <div class="pricing-grid single">
+        <div class="price-card highlight">
+          <h3>Free</h3>
+          <p>7 jours d’essai • 1 compte • 20 réponses</p>
+          <h4>0 €</h4>
+          <a href="signup.html" class="cta">Essayer</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 💸 Plans payants -->
+    <section id="pricing">
+      <h2>Nos Offres</h2>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <h3>Starter</h3>
+          <p>15 jours • 1 compte • 50 réponses</p>
+          <h4>6 €</h4>
+          <a href="signup.html" class="cta">Commencer</a>
+        </div>
+        <div class="price-card">
+          <h3>Pro</h3>
+          <p>30 jours • 2 comptes • 200 réponses</p>
+          <h4>11 €/mois</h4>
+          <a href="signup.html" class="cta">Commencer</a>
+        </div>
+        <div class="price-card">
+          <h3>Premium</h3>
+          <p>5 comptes • Réponses illimitées • Support</p>
+          <h4>17 €/mois</h4>
+          <a href="signup.html" class="cta">Commencer</a>
+        </div>
+        <div class="price-card">
+          <h3>Pack SMM</h3>
+          <p>Pour agences • Illimité + posts auto</p>
+          <h4>49 €/mois</h4>
+          <a href="signup.html" class="cta">Commencer</a>
+        </div>
+      </div>
+    </section>
+  </body>
 </html>

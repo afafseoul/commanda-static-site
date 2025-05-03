@@ -1,15 +1,17 @@
-const observer = new IntersectionObserver(
-    entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("visible");
-          observer.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.15 }
-  );
-  document.querySelectorAll(".fade-in").forEach(el => {
-    observer.observe(el);
+// Optional scroll reveal or animations
+document.querySelectorAll(".card, .price-card").forEach((el) => {
+    el.style.opacity = 0;
+    el.style.transform = "translateY(30px)";
+  });
+  
+  window.addEventListener("scroll", () => {
+    document.querySelectorAll(".card, .price-card").forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight - 100) {
+        el.style.opacity = 1;
+        el.style.transform = "translateY(0)";
+        el.style.transition = "all 0.8s ease-out";
+      }
+    });
   });
   
