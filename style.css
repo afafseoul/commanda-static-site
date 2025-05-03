@@ -4,9 +4,7 @@ body {
   background: #0f0f0f;
   color: #fff;
 }
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 .header {
   position: sticky;
   top: 0;
@@ -41,15 +39,25 @@ html {
   align-items: center;
   justify-content: center;
   text-align: center;
+  overflow: hidden;
 }
-.gradient-bg {
+.animated-bg {
   position: absolute;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle at center, #00ffc8 0%, #0f0f0f 80%);
-  opacity: 0.08;
-  animation: pulse 6s ease-in-out infinite;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background: linear-gradient(135deg, #ff00c8, #3b00ff, #00fff0, #ff00c8);
+  background-size: 600% 600%;
+  animation: gradientShift 15s ease infinite;
+  filter: blur(80px);
+  opacity: 0.12;
   z-index: 0;
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 .hero-content {
   z-index: 1;
@@ -68,6 +76,7 @@ html {
   padding: 5rem 2rem;
   max-width: 1200px;
   margin: auto;
+  text-align: center;
 }
 .grid-features, .grid-pricing {
   display: grid;
@@ -85,7 +94,7 @@ html {
   background: rgba(0,255,200,0.05);
 }
 .free-plan {
-  max-width: 300px;
+  max-width: 320px;
   margin: auto;
   margin-bottom: 4rem;
 }
@@ -112,8 +121,4 @@ footer {
 .fade-in.visible {
   opacity: 1;
   transform: translateY(0);
-}
-@keyframes pulse {
-  0%, 100% { opacity: 0.08; transform: scale(1); }
-  50% { opacity: 0.15; transform: scale(1.05); }
 }
