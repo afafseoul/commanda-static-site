@@ -1,21 +1,20 @@
-// Gradient Animation (déjà en CSS)
-
-// Scroll-Reveal animation
-const revealEls = document.querySelectorAll('.reveal');
-
-const revealConfig = {
-  root: null,
-  rootMargin: '0px',
-  threshold: 0.2
-};
-
-const observer = new IntersectionObserver((entries, obs) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('revealed');
-      obs.unobserve(entry.target);
+// Observer pour les animations au scroll
+const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target); // animation une seule fois
+        }
+      });
+    },
+    {
+      threshold: 0.15
     }
+  );
+  
+  // Cible tous les éléments avec la classe fade-in
+  document.querySelectorAll(".fade-in").forEach(el => {
+    observer.observe(el);
   });
-}, revealConfig);
-
-revealEls.forEach(el => observer.observe(el));
+  
