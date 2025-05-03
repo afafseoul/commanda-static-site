@@ -1,228 +1,248 @@
-/* Reset */
+/* ---------------------------------
+   🧼 RESET / BASE
+---------------------------------- */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-
 body {
-  font-family: "Inter", sans-serif;
-  background-color: #0b0b0b;
+  font-family: 'Inter', sans-serif;
+  background: #0f0f0f;
   color: #fff;
-  position: relative;
-  overflow-x: hidden;
+  line-height: 1.6;
 }
-
 a {
   color: inherit;
   text-decoration: none;
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+}
+button {
+  cursor: pointer;
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
 }
 
-/* 🔵 Gradient Background */
-#gradient-bg {
-  position: fixed;
+/* ---------------------------------
+   🔝 HEADER STICKY
+---------------------------------- */
+.header {
+  position: sticky;
   top: 0;
-  left: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle at center, #ff00cc, #3333ff, #00ffff);
-  background-size: 600% 600%;
-  animation: gradientShift 20s ease infinite;
-  filter: blur(100px);
-  opacity: 0.3;
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* 🧭 Header */
-header {
+  background: #0f0f0f;
+  padding: 1.2rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.2rem 2rem;
-  background: transparent;
-  position: sticky;
-  top: 0;
-  z-index: 999;
+  border-bottom: 1px solid #222;
+  z-index: 1000;
 }
-
 .logo {
-  font-size: 1.6rem;
   font-weight: bold;
+  font-size: 1.3rem;
 }
-
-nav {
+.nav {
   display: flex;
   gap: 1rem;
 }
-
-nav a {
-  padding: 0.6rem 1rem;
-  border-radius: 20px;
-  font-weight: 500;
-  transition: 0.3s;
+.nav-link {
+  color: #aaa;
+  font-size: 0.95rem;
 }
-
-nav a.outline {
-  border: 1px solid #fff;
-}
-
-nav a.solid {
-  background: white;
-  color: black;
-  font-weight: bold;
-}
-
-/* 🪐 Hero */
-.hero {
-  height: 90vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.hero-content h2 {
-  font-size: 2.6rem;
-  margin-bottom: 1rem;
-  font-weight: 800;
-}
-
-.hero-content p {
-  font-size: 1.1rem;
-  opacity: 0.9;
-  margin-bottom: 2rem;
-}
-
-.cta {
-  padding: 0.8rem 1.4rem;
-  background: transparent;
-  border: 1px solid #fff;
-  border-radius: 25px;
-  transition: 0.3s;
-  font-weight: bold;
-}
-
-.cta:hover {
+.nav-button {
   background: #fff;
   color: #000;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
-/* ✨ Features */
-section {
-  padding: 4rem 2rem;
-  text-align: center;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.2rem;
-  margin-top: 2rem;
-}
-
-.card {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1.5rem;
-  border-radius: 20px;
-  transition: 0.3s;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-}
-
-.card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-}
-
-/* 💸 Pricing */
-.pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
-}
-
-.pricing-grid.single {
-  justify-content: center;
+/* ---------------------------------
+   🎬 HERO SECTION + CTA
+---------------------------------- */
+.hero {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: linear-gradient(-45deg, #ff0066, #6600ff, #00ccff, #00ff99);
+  background-size: 400% 400%;
+  animation: gradientMove 15s ease-in-out infinite;
+  text-align: center;
+  padding: 0 2rem;
 }
-
-.price-card {
-  background: rgba(255, 255, 255, 0.06);
-  padding: 1.5rem;
-  border-radius: 20px;
-  transition: 0.3s;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-}
-
-.price-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
-}
-
-.price-card.highlight {
-  border: 2px solid #00ffe0;
-}
-
-.price-card h3 {
-  font-size: 1.3rem;
-  margin-bottom: 0.5rem;
-}
-
-.price-card p {
-  margin-bottom: 0.8rem;
-  opacity: 0.9;
-}
-
-.price-card h4 {
-  font-size: 1.5rem;
+.hero h1 {
+  font-size: 3rem;
   margin-bottom: 1rem;
 }
-
-/* 💻 Responsive */
-@media (max-width: 600px) {
-  .hero-content h2 {
-    font-size: 1.8rem;
-  }
-
-  .hero-content p {
-    font-size: 0.95rem;
-  }
+.hero p {
+  font-size: 1.2rem;
+  max-width: 600px;
+  margin: 0 auto;
+  opacity: 0.9;
 }
-/* Animation de fond */
-.animated-bg {
-  background: linear-gradient(-45deg, #1a1aff, #ff00ff, #00ffff, #1a1aff);
-  background-size: 400% 400%;
-  animation: gradientAnim 8s ease infinite;
+.cta-button {
+  margin-top: 2rem;
+  display: inline-block;
+  background: #fff;
+  color: #0f0f0f;
+  padding: 1rem 2rem;
+  border-radius: 2rem;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: transform 0.25s ease-out, background 0.25s ease-out;
 }
-
-/* Header sticky avec fond animé */
-header {
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  background: linear-gradient(-45deg, #1a1aff, #ff00ff, #00ffff, #1a1aff);
-  background-size: 400% 400%;
-  animation: gradientAnim 8s ease infinite;
-  backdrop-filter: blur(10px);
+.cta-button:hover {
+  transform: scale(1.05);
+  background: #eaeaea;
 }
-
-/* Animation fluide */
-@keyframes gradientAnim {
+@keyframes gradientMove {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+/* ---------------------------------
+   ✅ CHECKLIST (features)
+---------------------------------- */
+.checklist {
+  list-style: none;
+  padding: 2rem 0;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.check-item {
+  padding: 0.8rem 1rem;
+  border-left: 4px solid #00ff99;
+  background: #1c1c1c;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: transform 0.25s ease-out;
+}
+.check-item:hover {
+  transform: scale(1.02);
+}
+
+/* ---------------------------------
+   💰 PRICING (cartes offres)
+---------------------------------- */
+.pricing-table {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
+  margin-top: 3rem;
+}
+.pricing-table.solo {
+  justify-content: center;
+}
+.price-card {
+  background: #1e1e1e;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  width: 260px;
+  text-align: center;
+  transition: transform 0.25s ease-out;
+}
+.price-card:hover {
+  transform: scale(1.05);
+}
+.price-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.price-card p {
+  font-size: 1rem;
+  margin-bottom: 0.8rem;
+}
+.cta-inline {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: #fff;
+  color: #0f0f0f;
+  border-radius: 2rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 0.25s ease-out, background 0.25s ease-out;
+}
+.cta-inline:hover {
+  transform: scale(1.05);
+  background: #e0e0e0;
+}
+
+/* 🎨 Couleurs différenciées par offre */
+.price-card.free     { background: #142618; border-left: 4px solid #00ff88; }
+.price-card.starter  { background: #1d1f2a; border-left: 4px solid #6666ff; }
+.price-card.pro      { background: #221818; border-left: 4px solid #ff4444; }
+.price-card.premium  { background: #192427; border-left: 4px solid #00cccc; }
+.price-card.smm      { background: #2a1a27; border-left: 4px solid #ff77cc; }
+
+/* ---------------------------------
+   📦 SECTIONS / CONTAINERS
+---------------------------------- */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+}
+section {
+  padding: 4rem 0;
+}
+h1, h2, h3 {
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+}
+
+/* ---------------------------------
+   👣 FOOTER
+---------------------------------- */
+footer {
+  text-align: center;
+  padding: 2rem;
+  background: #111;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+footer a {
+  color: #fff;
+  font-weight: bold;
+}
+
+/* ---------------------------------
+   👀 SCROLL-REVEAL ANIMATIONS
+---------------------------------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.15s ease-out, transform 0.35s ease-out;
+}
+.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------------------------------
+   📱 RESPONSIVE
+---------------------------------- */
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+  .hero p {
+    font-size: 1rem;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nav {
+    margin-top: 0.5rem;
+  }
+  .pricing-table {
+    flex-direction: column;
+    align-items: center;
+  }
 }

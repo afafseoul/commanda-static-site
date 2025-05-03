@@ -1,162 +1,91 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Commanda – Automatise tes réponses Insta ⚡</title>
-    <link rel="stylesheet" href="style.css" />
-    <script defer src="script.js"></script>
-  </head>
-  <body>
-    <!-- 🌈 Fond animé -->
-    <div id="gradient-bg"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commanda – Réponses Insta automatiques</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
 
-    <!-- 🔝 Navigation -->
-    <header>
-      <h1 class="logo">Commanda</h1>
-      <nav>
-        <a href="#features">Fonctionnalités</a>
-        <a href="#pricing">Offres</a>
-        <a href="login.html" class="outline">Connexion</a>
-        <a href="signup.html" class="solid">S’inscrire</a>
-      </nav>
-    </header>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">Commanda</div>
+    <nav class="nav">
+      <a href="login.html" class="nav-link">Connexion</a>
+      <a href="signup.html" class="nav-button">S’inscrire</a>
+    </nav>
+  </header>
 
-    <!-- ✨ Hero Section -->
-    <section class="animated-bg text-white py-32 text-center">
-      <h1 class="text-4xl font-bold mb-4">Automatise tes réponses Insta ⚡</h1>
-      <p class="text-lg mb-8">Commanda répond automatiquement aux commentaires Instagram en moins de 2 minutes.</p>
-      <a href="#features" class="px-6 py-3 border rounded-full hover:bg-white hover:text-black transition">
-        Découvrir ↓
-      </a>
-    </section>
-    
-    <!-- ⚙️ Fonctionnalités -->
-    <section id="features">
-      <h2>Fonctionnalités clés</h2>
-      <div class="features-grid">
-        <div class="card">⚡ Réponse automatique <strong>&lt; 2 min</strong></div>
-        <div class="card">🍭 Ton personnalisé<br />(fun, pro, girly...)</div>
-        <div class="card">🧠 IA optimisée pour chaque post</div>
-        <div class="card">📊 Statistiques en temps réel</div>
-        <div class="card">🔐 Sécurité Meta API officielle</div>
-        <div class="card">🌐 Multi-comptes Instagram</div>
-      </div>
-    </section>
+  <!-- Hero -->
+  <section class="hero">
+    <h1 class="reveal">Automatise tes réponses Insta ⚡</h1>
+    <p class="reveal">Commanda répond à tes commentaires en moins de 2 minutes. Boost ton engagement, sans lever le petit doigt.</p>
+    <a href="signup.html" class="cta-button reveal">Commencer maintenant</a>
+  </section>
 
-    <!-- 🆓 Offre Free à part -->
-    <section class="bg-gradient-to-b from-[#140C2A] to-[#1a1537] py-24 px-4 text-white">
-      <div class="text-center mb-16">
-        <h2 class="text-4xl font-bold mb-4">Offre Gratuite</h2>
-        <div class="max-w-md mx-auto bg-black/30 rounded-2xl border border-cyan-400 p-6 shadow-lg">
-          <h3 class="text-2xl font-bold mb-2">Free</h3>
-          <p class="mb-4 text-sm leading-relaxed">
-            ✅ 7 jours d’essai<br>
-            ✅ 1 compte Instagram<br>
-            ✅ 20 réponses automatiques<br>
-            ✅ Réponses < 2 min<br>
-            ✅ Accès limité
-          </p>
-          <p class="text-2xl font-bold mb-4">0 €</p>
-          <a href="#" class="inline-block bg-white text-black rounded-full px-6 py-2 font-semibold hover:bg-gray-200">Essayer</a>
-        </div>
-      </div>
-    
-      <div class="text-center mb-10">
-        <h2 class="text-4xl font-bold">Nos Offres</h2>
-      </div>
-    
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-        
-        <!-- Starter -->
-        <div class="bg-black/20 rounded-2xl p-6 flex flex-col items-center shadow-lg border border-yellow-500">
-          <h3 class="text-xl font-bold mb-2">Starter</h3>
-          <p class="text-sm leading-relaxed mb-4 text-center">
-            🟡 2 semaines • 1 compte IG 🇫🇷<br>
-            📅 10 posts max/semaine<br>
-            💬 10 commentaires/post<br>
-            ⏱ Réponses < 2 min · 🕓 24h/24<br>
-            ⏳ Offre découverte – non renouvelable
-          </p>
-          <p class="text-xl font-bold mb-4">6 €</p>
-          <a href="https://buy.stripe.com/00gcODe5X1jc6Zy28c" class="inline-block bg-white text-black rounded-full px-5 py-2 font-semibold hover:bg-gray-200">Essayer</a>
-        </div>
-    
-        <!-- Pro -->
-        <div class="bg-black/20 rounded-2xl p-6 flex flex-col items-center shadow-lg border border-blue-500">
-          <h3 class="text-xl font-bold mb-2">Pro</h3>
-          <p class="text-sm leading-relaxed mb-4 text-center">
-            🔵 1 mois • 1 compte IG 🇫🇷<br>
-            📅 10 posts max/semaine<br>
-            💬 10 commentaires/post<br>
-            🧠 Dashboard + quota modifiable<br>
-            ⏱ Réponses < 2 min · 🕓 24h/24
-          </p>
-          <p class="text-xl font-bold mb-4">11 €/mois</p>
-          <a href="https://buy.stripe.com/bIY7uje5XaTMbfOdQT" class="inline-block bg-white text-black rounded-full px-5 py-2 font-semibold hover:bg-gray-200">Essayer</a>
-        </div>
-    
-        <!-- Premium -->
-        <div class="bg-black/20 rounded-2xl p-6 flex flex-col items-center shadow-lg border border-red-500">
-          <h3 class="text-xl font-bold mb-2">Premium</h3>
-          <p class="text-sm leading-relaxed mb-4 text-center">
-            🔴 1 mois • 1 compte IG 🇫🇷<br>
-            📅 50 posts/mois<br>
-            💬 10 commentaires/post<br>
-            📊 Dashboard complet<br>
-            ⏱ Réponses < 2 min · 🕓 24h/24
-          </p>
-          <p class="text-xl font-bold mb-4">17 €/mois</p>
-          <a href="https://buy.stripe.com/7sI7uj8LD9PIdnW5km" class="inline-block bg-white text-black rounded-full px-5 py-2 font-semibold hover:bg-gray-200">Essayer</a>
-        </div>
-    
-        <!-- Pack SMM -->
-        <div class="bg-black/20 rounded-2xl p-6 flex flex-col items-center shadow-lg border border-gray-400">
-          <h3 class="text-xl font-bold mb-2">Pack SMM</h3>
-          <p class="text-sm leading-relaxed mb-4 text-center">
-            ⚫️ 1 mois • 5 comptes IG 🇫🇷<br>
-            📅 10 posts/semaine/compte<br>
-            💬 10 commentaires/post<br>
-            📊 Dashboard multi-client<br>
-            ⏱ Réponses < 2 min · 🕓 24h/24
-          </p>
-          <p class="text-xl font-bold mb-4">49 €/mois</p>
-          <a href="https://buy.stripe.com/00g4i72nfbXQ0BadQR" class="inline-block bg-white text-black rounded-full px-5 py-2 font-semibold hover:bg-gray-200">Essayer</a>
-        </div>
-    
-      </div>
-    </section>
-    
+  <!-- Fonctionnalités -->
+  <section class="container reveal">
+    <h2>Fonctionnalités clés</h2>
+    <ul class="checklist">
+      <li class="check-item reveal">⚡ Réponses automatiques en <strong>< 2 minutes</strong> après post</li>
+      <li class="check-item reveal">🎯 Personnalisation du ton (fun, pro, girly...)</li>
+      <li class="check-item reveal">🔄 Gestion de plusieurs comptes Instagram</li>
+      <li class="check-item reveal">🧠 IA optimisée pour chaque commentaire</li>
+      <li class="check-item reveal">📊 Suivi automatique des performances</li>
+    </ul>
+  </section>
 
-    <!-- 💸 Plans payants -->
-    <section id="pricing">
-      <h2>Nos Offres</h2>
-      <div class="pricing-grid">
-        <div class="price-card">
-          <h3>Starter</h3>
-          <p>15 jours • 1 compte • 50 réponses</p>
-          <h4>6 €</h4>
-          <a href="signup.html" class="cta">Commencer</a>
-        </div>
-        <div class="price-card">
-          <h3>Pro</h3>
-          <p>30 jours • 2 comptes • 200 réponses</p>
-          <h4>11 €/mois</h4>
-          <a href="signup.html" class="cta">Commencer</a>
-        </div>
-        <div class="price-card">
-          <h3>Premium</h3>
-          <p>5 comptes • Réponses illimitées • Support</p>
-          <h4>17 €/mois</h4>
-          <a href="signup.html" class="cta">Commencer</a>
-        </div>
-        <div class="price-card">
-          <h3>Pack SMM</h3>
-          <p>Pour agences • Illimité + posts auto</p>
-          <h4>49 €/mois</h4>
-          <a href="signup.html" class="cta">Commencer</a>
-        </div>
+  <!-- Offre Free seule -->
+  <section class="container reveal">
+    <h2>Découvre gratuitement</h2>
+    <div class="pricing-table solo">
+      <div class="price-card free">
+        <h3>Free</h3>
+        <p>7 jours d'essai • 1 compte • 20 réponses</p>
+        <p><strong>0 €</strong></p>
+        <a href="signup.html" class="cta-inline">Essayer</a>
       </div>
-    </section>
-  </body>
+    </div>
+  </section>
+
+  <!-- Pricing principaux -->
+  <section class="container reveal">
+    <h2>Plans mensuels</h2>
+    <div class="pricing-table">
+      <div class="price-card starter">
+        <h3>Starter</h3>
+        <p>15 jours • 1 compte • 50 réponses</p>
+        <p><strong>6 €</strong></p>
+        <a href="signup.html" class="cta-inline">Commencer</a>
+      </div>
+      <div class="price-card pro">
+        <h3>Pro</h3>
+        <p>30 jours • 2 comptes • 200 réponses</p>
+        <p><strong>11 €/mois</strong></p>
+        <a href="signup.html" class="cta-inline">Commencer</a>
+      </div>
+      <div class="price-card premium">
+        <h3>Premium</h3>
+        <p>Illimité • 5 comptes • Support inclus</p>
+        <p><strong>17 €/mois</strong></p>
+        <a href="signup.html" class="cta-inline">Commencer</a>
+      </div>
+      <div class="price-card smm">
+        <h3>Pack SMM</h3>
+        <p>Pour agences • illimité + posts auto</p>
+        <p><strong>49 €/mois</strong></p>
+        <a href="signup.html" class="cta-inline">Commencer</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="reveal">
+    © 2025 Commanda – <a href="signup.html">Commence gratuitement</a>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
 </html>

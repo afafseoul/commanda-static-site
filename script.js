@@ -1,17 +1,21 @@
-// Optional scroll reveal or animations
-document.querySelectorAll(".card, .price-card").forEach((el) => {
-    el.style.opacity = 0;
-    el.style.transform = "translateY(30px)";
+// Gradient Animation (déjà en CSS)
+
+// Scroll-Reveal animation
+const revealEls = document.querySelectorAll('.reveal');
+
+const revealConfig = {
+  root: null,
+  rootMargin: '0px',
+  threshold: 0.2
+};
+
+const observer = new IntersectionObserver((entries, obs) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('revealed');
+      obs.unobserve(entry.target);
+    }
   });
-  
-  window.addEventListener("scroll", () => {
-    document.querySelectorAll(".card, .price-card").forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      if (rect.top < window.innerHeight - 100) {
-        el.style.opacity = 1;
-        el.style.transform = "translateY(0)";
-        el.style.transition = "all 0.8s ease-out";
-      }
-    });
-  });
-  
+}, revealConfig);
+
+revealEls.forEach(el => observer.observe(el));
