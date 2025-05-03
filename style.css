@@ -246,3 +246,38 @@ footer a {
     align-items: center;
   }
 }
+.features-section {
+  background: #0b0b0b;
+  color: white;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.features-section h2 {
+  font-size: 2.5rem;
+  margin-bottom: 40px;
+}
+
+.features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: #1a1a1a;
+  border-left: 4px solid #00f5c6;
+  padding: 18px 22px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  text-align: left;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-left-color: #9a6fff;
+}
