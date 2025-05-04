@@ -1,21 +1,32 @@
-// Gradient Animation (déjà en CSS)
+// === Supabase Auth Init ===
+const { createClient } = supabase;
 
-// Scroll-Reveal animation
-const revealEls = document.querySelectorAll('.reveal');
+const supabaseUrl = 'https://jgdsbsgajoidkqiwndnp.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNDg4NDcsImV4cCI6MjA2MTgyNDg0N30.7h5X4HUlX2hylPpcJfRxPeHezJYlPommJZIYLbu1kSY';
 
-const revealConfig = {
-  root: null,
-  rootMargin: '0px',
-  threshold: 0.2
-};
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-const observer = new IntersectionObserver((entries, obs) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('revealed');
-      obs.unobserve(entry.target);
+// === SIGNUP HANDLER ===
+document.getElementById('signup-form').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const fullname = document.getElementById('fullname').value;
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { fullname }
     }
   });
-}, revealConfig);
 
-revealEls.forEach(el => observer.observe(el));
+  if (error) {
+    alert('Erreur: ' + error.message);
+    console.error(error);
+  } else {
+    alert('Inscription réussie ! Vérifie ton e-mail ✉️');
+    console.log('Success:', data);
+  }
+});
