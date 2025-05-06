@@ -42,8 +42,17 @@ document.getElementById('google-login').addEventListener('click', async function
   }
 });
 
-supabase.auth.onAuthStateChange((event, session) => {
+// Redirection après connexion (ex: via mail ou Google)
+supabaseClient.auth.onAuthStateChange((event, session) => {
   if (session && session.user) {
     window.location.href = "/dashboard.html";  // crée cette page si elle n'existe pas encore
   }
 });
+
+// Redirection post-OAuth directe (si token dans l'URL après retour Google)
+const hashParams = new URLSearchParams(window.location.hash.substr(1));
+const accessToken = hashParams.get("access_token");
+
+if (accessToken) {
+  window.location.href = "/dashboard.html";
+}
