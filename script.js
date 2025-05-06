@@ -34,6 +34,9 @@ document.getElementById('signup-form').addEventListener('submit', async function
 document.getElementById('google-login').addEventListener('click', async function () {
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
+    options: {
+      redirectTo: 'https://cozy-maamoul-92d86f.netlify.app/dashboard.html'
+    }
   });
 
   if (error) {
@@ -41,6 +44,7 @@ document.getElementById('google-login').addEventListener('click', async function
     console.error(error);
   }
 });
+
 
 // Redirection après connexion (ex: via mail ou Google)
 supabaseClient.auth.onAuthStateChange((event, session) => {
