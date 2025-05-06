@@ -41,3 +41,9 @@ document.getElementById('google-login').addEventListener('click', async function
     console.error(error);
   }
 });
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session && session.user) {
+    window.location.href = "/dashboard.html";  // crée cette page si elle n'existe pas encore
+  }
+});
