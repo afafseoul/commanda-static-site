@@ -30,3 +30,14 @@ document.getElementById('signup-form').addEventListener('submit', async function
     console.log('Success:', data);
   }
 });
+
+document.getElementById('google-login').addEventListener('click', async function () {
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+  });
+
+  if (error) {
+    alert('Erreur Google: ' + error.message);
+    console.error(error);
+  }
+});
