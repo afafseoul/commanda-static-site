@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Mon Espace – Commanda</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mon espace – Commanda</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body class="dashboard">
-
-  <header class="site-header">
-    <h1 class="logo">Commanda</h1>
-    <button id="logout-button" class="cta-button">Déconnexion</button>
+<body>
+  <header class="header">
+    <div class="logo">Commanda</div>
+    <button id="logout-button" class="nav-button">Se déconnecter</button>
   </header>
 
-  <main class="dashboard-content">
-    <h2 id="welcome-msg">Chargement...</h2>
-    <div id="current-plan"></div>
-    <div id="available-plans"></div>
+  <main class="container fade-up">
+    <h1 id="welcome-msg">Chargement...</h1>
+    <section id="current-plan" style="margin-top: 2rem;"></section>
+    <section id="available-plans" style="margin-top: 3rem;"></section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="script.js"></script>
+  <footer class="site-footer">© 2025 — Commanda.</footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
 </body>
 </html>
+
