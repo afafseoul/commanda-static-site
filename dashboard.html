@@ -2,10 +2,24 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
+  <title>Mon Espace – Commanda</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <h1>Bienvenue sur ton dashboard !</h1>
-  <p>Tu es connecté avec Google 🎉</p>
+<body class="dashboard">
+
+  <header class="site-header">
+    <h1 class="logo">Commanda</h1>
+    <button id="logout-button" class="cta-button">Déconnexion</button>
+  </header>
+
+  <main class="dashboard-content">
+    <h2 id="welcome-msg">Chargement...</h2>
+    <div id="current-plan"></div>
+    <div id="available-plans"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="script.js"></script>
+
 </body>
 </html>
