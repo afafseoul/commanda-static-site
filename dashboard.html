@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mon espace – Commanda</title>
+  <title>Dashboard – Commanda</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -21,48 +21,50 @@
   <footer class="site-footer">© 2025 — Commanda.</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js"></script>
   <script>
-    const supabaseClient = supabase.createClient(
+    const supabase = supabase.createClient(
       'https://jgdsbsgajoidkqiwndnp.supabase.co',
-      'PASTE_YOUR_ANON_KEY_HERE'
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // remplace avec ta vraie anon key
     );
 
-    async function initDashboard() {
-      let { data: { session } } = await supabaseClient.auth.getSession();
+    function showDashboard(user) {
+      document.getElementById("welcome-msg").innerText =
+        `Bienvenue, ${user.user_metadata.full_name || "Utilisateur"} !`;
 
-      // 🔁 fallback : si pas de session, tente getUser (valide même avec token dans URL)
-      if (!session) {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) {
-          window.location.href = "/signup.html";
-          return;
-        }
-        session = { user };
-      }
+      document.getElementById("current-plan").innerHTML = `
+        <p>Tu es connecté avec succès. Chargement du dashboard…</p>
+      `;
 
-      const user = session.user;
-
-      const { data: existingUser } = await supabaseClient
-        .from("users_web")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!existingUser) {
-        await supabaseClient.from("users_web").insert({
-          id: user.id,
-          email: user.email,
-          pseudo: user.user_metadata.full_name || "Utilisateur",
-          Plan: null,
-          used_free_trial: false,
-        });
-      }
-
-      window.launchDashboardDisplay(supabaseClient);
+      // Tu peux maintenant appeler script.js → window.launchDashboardDisplay(supabase);
     }
 
-    initDashboard();
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        showDashboard(session.user);
+      } else {
+        // Pas de session ? Attendre l'événement
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (event === "SIGNED_IN" && session?.user) {
+            showDashboard(session.user);
+          } else {
+            // Rien du tout après quelques secondes → go signup
+            setTimeout(() => {
+              window.location.href = "/signup.html";
+            }, 2000);
+          }
+        });
+      }
+    }
+
+    init();
+
+    // Déconnexion
+    document.getElementById("logout-button").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
   </script>
 </body>
 </html>
