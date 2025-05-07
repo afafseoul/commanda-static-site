@@ -1,52 +1,44 @@
-<!-- ✅ login.html -->
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Connexion – Commanda</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="header">
-    <div class="logo">Commanda</div>
-    <nav class="nav">
-      <a href="signup.html" class="nav-button">S’inscrire</a>
-    </nav>
-  </header>
-
-  <main class="signup-container">
-    <h1 class="section-title">Connexion</h1>
-    <form id="login-form" class="signup-form">
-      <label for="email">E-mail</label>
-      <input type="email" id="email" placeholder="jean@example.com" required />
-
-      <label for="password">Mot de passe</label>
-      <input type="password" id="password" placeholder="••••••••" required />
-
-      <button type="submit" class="btn">Se connecter</button>
-      <p class="redirect-text">Pas encore inscrit ? <a href="signup.html">Créer un compte</a></p>
+  <header><h1>Commanda</h1></header>
+  <main>
+    <form id="login-form">
+      <h2>Connexion</h2>
+      <input type="email" id="email" placeholder="E-mail" required />
+      <input type="password" id="password" placeholder="Mot de passe" required />
+      <button type="submit">Se connecter</button>
     </form>
+    <p>Pas encore inscrit ? <a href="signup.html">Créer un compte</a></p>
   </main>
 
-  <footer class="footer">© 2025 — Commanda.</footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
-    const supabase = window.supabase.createClient(
-      'https://jgdsbsgajoidkqiwndnp.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // remplace par ta clé réelle
-    );
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    const supabase = createClient('https://jgdsbsgajoidkqiwndnp.supabase.co', 'YOUR_PUBLIC_ANON_KEY_HERE');
 
-    document.getElementById("login-form").addEventListener("submit", async (e) => {
+    const form = document.getElementById("login-form");
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      if (error) return alert("Erreur : " + error.message);
-      window.location.href = "dashboard.html";
+      if (error) {
+        alert("Erreur : " + error.message);
+      } else {
+        window.location.href = "dashboard.html";
+      }
     });
   </script>
 </body>
