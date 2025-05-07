@@ -21,7 +21,45 @@
   <footer class="site-footer">© 2025 — Commanda.</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const supabaseClient = supabase.createClient(
+      'https://jgdsbsgajoidkqiwndnp.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // Remplace si besoin
+    );
+
+    async function initDashboard() {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (!session || error) {
+        window.location.href = "/signup.html";
+        return;
+      }
+
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
+      // ⚠️ Création automatique s’il manque une ligne dans users_web
+      const { data: existingUser } = await supabaseClient
+        .from("users_web")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!existingUser) {
+        await supabaseClient.from("users_web").insert({
+          id: user.id,
+          email: user.email,
+          pseudo: user.user_metadata.full_name || "Utilisateur",
+          Plan: null,
+          used_free_trial: false,
+        });
+      }
+
+      // ✅ Ensuite, ton script.js prendra le relais pour afficher le dashboard
+      document.getElementById("welcome-msg").textContent = "Bienvenue !";
+    }
+
+    initDashboard();
+  </script>
+
   <script src="script.js"></script>
 </body>
 </html>
-
