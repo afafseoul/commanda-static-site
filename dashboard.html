@@ -24,19 +24,28 @@
   <script>
     const supabaseClient = supabase.createClient(
       'https://jgdsbsgajoidkqiwndnp.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // Remplace si besoin
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // Ton vrai anon key
     );
 
+    async function waitForSession(retries = 10) {
+      for (let i = 0; i < retries; i++) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) return session;
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      return null;
+    }
+
     async function initDashboard() {
-      const { data: { session }, error } = await supabaseClient.auth.getSession();
-      if (!session || error) {
+      const session = await waitForSession();
+      if (!session) {
         window.location.href = "/signup.html";
         return;
       }
 
       const { data: { user } } = await supabaseClient.auth.getUser();
 
-      // ⚠️ Création automatique s’il manque une ligne dans users_web
+      // Vérifie ou crée l’entrée dans users_web
       const { data: existingUser } = await supabaseClient
         .from("users_web")
         .select("id")
@@ -53,7 +62,7 @@
         });
       }
 
-      // ✅ Ensuite, ton script.js prendra le relais pour afficher le dashboard
+      // Laisse ton script.js faire le reste
       document.getElementById("welcome-msg").textContent = "Bienvenue !";
     }
 
