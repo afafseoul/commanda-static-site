@@ -1,64 +1,51 @@
-const { createClient } = supabase;
-
 const supabaseUrl = 'https://jgdsbsgajoidkqiwndnp.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // raccourci ici
-const supabaseClient = createClient(supabaseUrl, supabaseKey);
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-async function loadDashboard() {
-  const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-  if (!user) {
-    window.location.href = "/signup.html";
-    return;
-  }
+// Gestion de l'inscription
+const signupForm = document.querySelector("#signup-form");
+if (signupForm) {
+  signupForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = signupForm.querySelector("#email").value;
+    const password = signupForm.querySelector("#password").value;
 
-  const { data, error } = await supabaseClient
-    .from("users_web")
-    .select("pseudo, Plan, used_free_trial")
-    .eq("id", user.id)
-    .single();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
-  const welcome = document.getElementById("welcome-msg");
-  const current = document.getElementById("current-plan");
-  const available = document.getElementById("available-plans");
-
-  if (error) {
-    console.error("Erreur récupération user:", error);
-    welcome.textContent = "Erreur de connexion.";
-    return;
-  }
-
-  welcome.textContent = `Bienvenue ${data.pseudo ?? ""} !`;
-
-  if (data.Plan) {
-    current.innerHTML = `<p>🟢 Ton offre actuelle : <strong>${data.Plan}</strong></p>`;
-  } else {
-    current.innerHTML = `<p>🔴 Aucune offre active.</p>`;
-  }
-
-  let html = `<h3>Offres disponibles :</h3><ul>`;
-  if (!data.used_free_trial && !data.Plan) {
-    html += `<li>✅ <strong>Essai gratuit</strong> (7 jours)</li>`;
-  }
-  html += `
-    <li>💛 Starter – 6€</li>
-    <li>🔵 Pro – 11€/mois</li>
-    <li>🔴 Premium – 17€/mois</li>
-    <li>⚫ Pack SMM – 49€/mois</li>
-  `;
-  html += `</ul>`;
-
-  available.innerHTML = html;
-}
-
-// Déconnexion
-const logoutButton = document.getElementById('logout-button');
-if (logoutButton) {
-  logoutButton.addEventListener('click', async () => {
-    await supabaseClient.auth.signOut();
-    window.location.href = "/index.html";
+    if (error) {
+      alert("Erreur : " + error.message);
+    } else {
+      window.location.href = "/dashboard.html";
+    }
   });
 }
 
+// Connexion Google
+const googleBtn = document.getElementById("google-login");
+if (googleBtn) {
+  googleBtn.addEventListener("click", async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://cozy-maamoul-92d86f.netlify.app/dashboard.html"
+      }
+    });
+    if (error) console.error("Erreur Google :", error);
+  });
+}
+
+// Gestion de la session
+async function checkSession() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    window.location.href = "/signup.html";
+  }
+}
+
+// Redirection automatique si sur le dashboard
 if (window.location.pathname.includes("dashboard.html")) {
-  loadDashboard();
+  checkSession();
 }
