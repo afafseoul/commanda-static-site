@@ -39,8 +39,16 @@ if (googleBtn) {
 
 // Gestion de la session
 async function checkSession() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
+  const { data: { session }, error } = await supabase.auth.getSession();
+
+  // ⚠️ On ajoute un délai si session null mais pas d'erreur
+  if (!session && !error) {
+    // attend 500ms, puis relance la vérif (jusqu'à 3 fois max)
+    setTimeout(checkSession, 500);
+    return;
+  }
+
+  if (!session || error) {
     window.location.href = "/signup.html";
   }
 }
