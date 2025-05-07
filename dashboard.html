@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -16,7 +15,10 @@
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
-    const supabase = createClient('https://jgdsbsgajoidkqiwndnp.supabase.co', 'YOUR_PUBLIC_ANON_KEY_HERE');
+    const supabase = createClient(
+      'https://jgdsbsgajoidkqiwndnp.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+    );
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
