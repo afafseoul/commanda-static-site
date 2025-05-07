@@ -1,3 +1,4 @@
+<!-- ✅ dashboard.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -13,7 +14,7 @@
   </header>
 
   <main class="container fade-up">
-    <h1 id="welcome-msg">Chargement...</h1>
+    <h1 id="welcome-msg">Chargement…</h1>
     <section id="current-plan" style="margin-top: 2rem;"></section>
     <section id="available-plans" style="margin-top: 3rem;"></section>
   </main>
@@ -21,52 +22,36 @@
   <footer class="site-footer">© 2025 — Commanda.</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    // D'abord créer Supabase
+  <script type="module">
     const supabase = window.supabase.createClient(
       'https://jgdsbsgajoidkqiwndnp.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // Remplace par ta vraie clé anon
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // remplace par ta clé réelle
     );
 
-    function showDashboard(user) {
+    async function initDashboard() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (!session || error) {
+        window.location.href = "signup.html";
+        return;
+      }
+
+      const user = session.user;
       document.getElementById("welcome-msg").innerText =
-        `Bienvenue, ${user.user_metadata.full_name || "Utilisateur"} !`;
+        `Bienvenue, ${user.email} !`;
 
+      // Appel possible à Supabase pour afficher Plan etc.
       document.getElementById("current-plan").innerHTML = `
-        <p>Tu es connecté avec succès. Chargement du dashboard…</p>
+        <p>Tu es connecté. Plan actuel : <strong>À récupérer depuis la BDD</strong></p>
       `;
-
-      // Appelle ici le script JS du dashboard si nécessaire :
-      if (typeof window.launchDashboardDisplay === 'function') {
-        window.launchDashboardDisplay(supabase);
-      }
     }
-
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        showDashboard(session.user);
-      } else {
-        supabase.auth.onAuthStateChange((event, session) => {
-          if (event === "SIGNED_IN" && session?.user) {
-            showDashboard(session.user);
-          } else {
-            // Redirige après un délai si aucune session valide
-            setTimeout(() => {
-              window.location.href = "/signup.html";
-            }, 2000);
-          }
-        });
-      }
-    }
-
-    init();
 
     document.getElementById("logout-button").addEventListener("click", async () => {
       await supabase.auth.signOut();
-      window.location.href = "/signup.html";
+      window.location.href = "signup.html";
     });
+
+    initDashboard();
   </script>
 </body>
 </html>

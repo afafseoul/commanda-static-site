@@ -1,3 +1,4 @@
+<!-- ✅ signup.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -43,30 +44,29 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
-    const supabase = window.supabase.createClient("https://TON_URL.supabase.co", "TON_ANON_KEY");
+    const supabase = window.supabase.createClient(
+      'https://jgdsbsgajoidkqiwndnp.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // remplace par ta clé réelle
+    );
 
     document.getElementById("signup-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password
-      });
+      const { data, error } = await supabase.auth.signUp({ email, password });
 
       if (error) return alert("Erreur : " + error.message);
       window.location.href = "dashboard.html";
     });
 
     document.getElementById("google-login").addEventListener("click", async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
+      await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: "https://cozy-maamoul-92d86f.netlify.app/dashboard.html"
         }
       });
-      if (error) alert("Erreur Google : " + error.message);
     });
   </script>
 </body>

@@ -1,72 +1,52 @@
+<!-- ✅ login.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Inscription – Commanda</title>
+  <title>Connexion – Commanda</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="header">
     <div class="logo">Commanda</div>
     <nav class="nav">
-      <a href="login.html" class="cta-header">Connexion</a>
+      <a href="signup.html" class="nav-button">S’inscrire</a>
     </nav>
   </header>
 
-  <main class="auth-section fade-up">
-    <form id="signup-form" class="auth-box">
-      <h2 class="auth-title">Créer mon compte</h2>
+  <main class="signup-container">
+    <h1 class="section-title">Connexion</h1>
+    <form id="login-form" class="signup-form">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" placeholder="jean@example.com" required />
 
-      <label>Nom complet</label>
-      <input id="fullname" type="text" placeholder="Jean Dupont" required />
+      <label for="password">Mot de passe</label>
+      <input type="password" id="password" placeholder="••••••••" required />
 
-      <label>E-mail</label>
-      <input id="email" type="email" placeholder="jean@example.com" required />
-
-      <label>Mot de passe</label>
-      <input id="password" type="password" placeholder="••••••••" minlength="8" required />
-
-      <label class="checkbox-container">
-        <input type="checkbox" required /> J’accepte les CGU
-      </label>
-
-      <button type="submit" class="cta-button full-width">Créer mon compte</button>
-      <div style="margin: 20px auto; text-align: center;">ou</div>
-      <button type="button" id="google-login" class="cta-button full-width">Continuer avec Google</button>
-
-      <p class="alt-link">Déjà inscrit ? <a href="login.html">Se connecter</a></p>
+      <button type="submit" class="btn">Se connecter</button>
+      <p class="redirect-text">Pas encore inscrit ? <a href="signup.html">Créer un compte</a></p>
     </form>
   </main>
 
-  <footer class="site-footer">© 2025 — Commanda.</footer>
+  <footer class="footer">© 2025 — Commanda.</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
-    const supabase = window.supabase.createClient("https://TON_URL.supabase.co", "TON_ANON_KEY");
+    const supabase = window.supabase.createClient(
+      'https://jgdsbsgajoidkqiwndnp.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // remplace par ta clé réelle
+    );
 
-    document.getElementById("signup-form").addEventListener("submit", async (e) => {
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) return alert("Erreur : " + error.message);
       window.location.href = "dashboard.html";
-    });
-
-    document.getElementById("google-login").addEventListener("click", async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: "https://cozy-maamoul-92d86f.netlify.app/dashboard.html"
-        }
-      });
-      if (error) alert("Erreur Google : " + error.message);
     });
   </script>
 </body>
