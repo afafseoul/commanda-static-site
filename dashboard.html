@@ -22,9 +22,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const supabase = supabase.createClient(
+    // D'abord créer Supabase
+    const supabase = window.supabase.createClient(
       'https://jgdsbsgajoidkqiwndnp.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // remplace avec ta vraie anon key
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' // Remplace par ta vraie clé anon
     );
 
     function showDashboard(user) {
@@ -35,7 +36,10 @@
         <p>Tu es connecté avec succès. Chargement du dashboard…</p>
       `;
 
-      // Tu peux maintenant appeler script.js → window.launchDashboardDisplay(supabase);
+      // Appelle ici le script JS du dashboard si nécessaire :
+      if (typeof window.launchDashboardDisplay === 'function') {
+        window.launchDashboardDisplay(supabase);
+      }
     }
 
     async function init() {
@@ -44,12 +48,11 @@
       if (session?.user) {
         showDashboard(session.user);
       } else {
-        // Pas de session ? Attendre l'événement
         supabase.auth.onAuthStateChange((event, session) => {
           if (event === "SIGNED_IN" && session?.user) {
             showDashboard(session.user);
           } else {
-            // Rien du tout après quelques secondes → go signup
+            // Redirige après un délai si aucune session valide
             setTimeout(() => {
               window.location.href = "/signup.html";
             }, 2000);
@@ -60,7 +63,6 @@
 
     init();
 
-    // Déconnexion
     document.getElementById("logout-button").addEventListener("click", async () => {
       await supabase.auth.signOut();
       window.location.href = "/signup.html";
