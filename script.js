@@ -37,21 +37,32 @@ if (googleBtn) {
   });
 }
 
-// Gestion de la session
+// Gestion de la session + récupération post-connexion OAuth
+let sessionCheckAttempts = 0;
 async function checkSession() {
   const { data: { session }, error } = await supabase.auth.getSession();
 
-  // ⚠️ On ajoute un délai si session null mais pas d'erreur
-  if (!session && !error) {
-    // attend 500ms, puis relance la vérif (jusqu'à 3 fois max)
+  if (!session && sessionCheckAttempts < 3) {
+    sessionCheckAttempts++;
     setTimeout(checkSession, 500);
     return;
   }
 
   if (!session || error) {
     window.location.href = "/signup.html";
+  } else {
+    // Si session valide, tu peux maintenant charger les données ici si besoin
+    console.log("Session active :", session);
+    // Par exemple : fetchUserData(); ou afficher le dashboard
   }
 }
+
+// Récupération automatique après redirection OAuth
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_IN" && session) {
+    window.location.href = "/dashboard.html";
+  }
+});
 
 // Redirection automatique si sur le dashboard
 if (window.location.pathname.includes("dashboard.html")) {
