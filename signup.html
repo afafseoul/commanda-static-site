@@ -4,16 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inscription – Commanda</title>
-
-  <!-- Fonts + Styles -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-  <!-- ===== HEADER ===== -->
   <header class="header">
     <div class="logo">Commanda</div>
     <nav class="nav">
@@ -21,51 +14,60 @@
     </nav>
   </header>
 
-  <!-- ===== SIGNUP FORM ===== -->
   <main class="auth-section fade-up">
-    <form class="auth-box" id="signup-form" novalidate>
+    <form id="signup-form" class="auth-box">
       <h2 class="auth-title">Créer mon compte</h2>
 
-      <div class="form-field">
-        <label for="fullname">Nom complet</label>
-        <input id="fullname" name="fullname" type="text" placeholder="Jean Dupont" required />
-        <span class="error-msg" aria-live="polite"></span>
-      </div>
+      <label>Nom complet</label>
+      <input id="fullname" type="text" placeholder="Jean Dupont" required />
 
-      <div class="form-field">
-        <label for="email">E-mail</label>
-        <input id="email" name="email" type="email" placeholder="jean@exemple.com" required />
-        <span class="error-msg" aria-live="polite"></span>
-      </div>
+      <label>E-mail</label>
+      <input id="email" type="email" placeholder="jean@example.com" required />
 
-      <div class="form-field">
-        <label for="password">Mot de passe</label>
-        <input id="password" name="password" type="password" placeholder="********" minlength="8" required />
-        <span class="error-msg" aria-live="polite"></span>
-      </div>
+      <label>Mot de passe</label>
+      <input id="password" type="password" placeholder="••••••••" minlength="8" required />
 
-      <div class="form-field checkbox-field">
-        <input id="cgu" type="checkbox" required />
-        <label for="cgu">J’accepte les <a href="#">CGU</a></label>
-      </div>
+      <label class="checkbox-container">
+        <input type="checkbox" required /> J’accepte les CGU
+      </label>
 
       <button type="submit" class="cta-button full-width">Créer mon compte</button>
+      <div style="margin: 20px auto; text-align: center;">ou</div>
+      <button type="button" id="google-login" class="cta-button full-width">Continuer avec Google</button>
 
-      <div style="text-align:center; margin: 20px 0;">ou</div>
-
-      <button type="button" id="google-login" class="cta-button full-width" style="background:#fff; color:#000;">
-        Continuer avec Google
-      </button>
-
-      <p class="alt-link">Déjà inscrit ? <a href="login.html">Se connecter</a></p>
+      <p class="alt-link">Déjà inscrit ? <a href="login.html">Se connecter</a></p>
     </form>
   </main>
 
-  <!-- ===== FOOTER ===== -->
-  <footer class="site-footer">© 2025 — Commanda. Tous droits réservés.</footer>
+  <footer class="site-footer">© 2025 — Commanda.</footer>
 
-  <!-- ===== Supabase & Script ===== -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js"></script>
+  <script type="module">
+    const supabase = window.supabase.createClient("https://TON_URL.supabase.co", "TON_ANON_KEY");
+
+    document.getElementById("signup-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password
+      });
+
+      if (error) return alert("Erreur : " + error.message);
+      window.location.href = "dashboard.html";
+    });
+
+    document.getElementById("google-login").addEventListener("click", async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: "https://cozy-maamoul-92d86f.netlify.app/dashboard.html"
+        }
+      });
+      if (error) alert("Erreur Google : " + error.message);
+    });
+  </script>
 </body>
 </html>
