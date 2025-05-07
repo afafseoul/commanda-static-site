@@ -68,3 +68,20 @@ supabase.auth.onAuthStateChange((event, session) => {
 if (window.location.pathname.includes("dashboard.html")) {
   checkSession();
 }
+// Redirection automatique si sur le dashboard
+if (window.location.pathname.includes("dashboard.html")) {
+  (async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (!user || error) {
+      window.location.href = "/signup.html";
+      return;
+    }
+
+    // 🔥 Session confirmée, appelle ici ta fonction d'affichage si tu en as une
+    console.log("Utilisateur connecté :", user);
+
+    // Exemple rapide :
+    document.getElementById("welcome-msg").innerText = `Bienvenue, ${user.user_metadata.full_name || "Utilisateur"} !`;
+  })();
+}
