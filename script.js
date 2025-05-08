@@ -22,8 +22,8 @@ const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
   (async () => {
-    // 🚨 Capture du token si dans l'URL (obligatoire après login OAuth)
-    await supabase.auth.getSessionFromUrl();
+    // ✅ Capture du token OAuth depuis URL (v2 = exchangeCodeForSession)
+    await supabase.auth.exchangeCodeForSession();
 
     const {
       data: { session },
