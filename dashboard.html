@@ -2,13 +2,30 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
+  <title>Inscription</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Bienvenue</h1>
-  <p id="user-email">Chargement...</p>
-  <button id="logout">Se déconnecter</button>
-  <script type="module" src="script.js"></script>
+  <h1>Créer mon compte</h1>
+  <button id="google-login">Continuer avec Google</button>
+
+  <p>Déjà inscrit ? <a href="dashboard.html">Accéder au dashboard</a></p>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    const supabase = createClient(
+      'https://jgdsbsgajoidkqiwndnp.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+    );
+
+    document.getElementById("google-login").addEventListener("click", async () => {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: "https://cozy-maamoul-92d86f.netlify.app/dashboard.html"
+        }
+      });
+    });
+  </script>
 </body>
 </html>
