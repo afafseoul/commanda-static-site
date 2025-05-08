@@ -22,20 +22,32 @@ const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
   supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-    if (!session || error) {
-      return; // NE REDIRIGE PAS ICI
-    }
+    if (!session || error) return;
 
     const user = session.user;
     emailEl.textContent = user.email;
 
+    // 🔍 Check if user already exists
     const { data, error: dbError } = await supabase
       .from("users_web")
       .select("*")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (data) {
+    if (!data) {
+      // ✅ Auto insert user in users_web
+      await supabase.from("users_web").insert({
+        id: user.id,
+        email: user.email,
+        pseudo: user.user_metadata?.full_name || "",
+        Plan: "Free",
+        used_free_trial: false
+      });
+
+      pseudoEl.textContent = user.user_metadata?.full_name || "-";
+      planEl.textContent = "Free";
+      trialEl.textContent = "Non";
+    } else {
       pseudoEl.textContent = data.pseudo || "-";
       planEl.textContent = data.Plan || "-";
       trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
