@@ -22,43 +22,52 @@
   </main>
 
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
   
     const supabase = createClient(
       'https://jgdsbsgajoidkqiwndnp.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
     );
   
+    const emailField = document.getElementById("user-email");
+    const pseudoField = document.getElementById("user-pseudo");
+    const planField = document.getElementById("user-plan");
+    const trialField = document.getElementById("user-trial");
+  
     const updateUI = async (session) => {
       const user = session.user;
-  
-      const { data: userData, error } = await supabase
-        .from("users_web")
-        .select("*")
-        .eq("id", user.id)
+      const { data, error } = await supabase
+        .from('users_web')
+        .select('*')
+        .eq('id', user.id)
         .maybeSingle();
   
-      if (error || !userData) {
-        console.error("Erreur lors de la récupération des données :", error);
+      if (error || !data) {
+        console.error("Erreur récupération DB :", error);
         return;
       }
   
-      document.getElementById("user-email").textContent = userData.email;
-      document.getElementById("user-pseudo").textContent = userData.pseudo || "-";
-      document.getElementById("user-plan").textContent = userData.Plan || "-";
-      document.getElementById("user-trial").textContent = userData.used_free_trial ? "Oui" : "Non";
+      emailField.textContent = data.email;
+      pseudoField.textContent = data.pseudo || "-";
+      planField.textContent = data.Plan || "-";
+      trialField.textContent = data.used_free_trial ? "Oui" : "Non";
     };
   
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      updateUI(session);
-    }
+    // Attend qu'une session soit valide, sinon on fait rien (pas de redirection immédiate !)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) updateUI(session);
+    });
   
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         updateUI(session);
       } else {
-        window.location.href = "/signup.html";
+        // Attendre 3 secondes avant de rediriger (au cas où Google prend du temps)
+        setTimeout(() => {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) window.location.href = "/signup.html";
+          });
+        }, 3000);
       }
     });
   
@@ -66,6 +75,6 @@
       await supabase.auth.signOut();
       window.location.href = "/signup.html";
     });
-  </script>  
+  </script>   
 </body>
 </html>
