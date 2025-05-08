@@ -5,56 +5,51 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
 );
 
-// LOGIN GOOGLE
-const googleLoginBtn = document.getElementById("google-login");
-if (googleLoginBtn) {
-  googleLoginBtn.addEventListener("click", async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    if (error) alert("Erreur OAuth : " + error.message);
+// SIGNUP.HTML - Connexion avec Google
+const googleBtn = document.getElementById("google-login");
+if (googleBtn) {
+  googleBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+    });
+    if (error) alert("Erreur de connexion : " + error.message);
   });
 }
 
-// DASHBOARD LOGIC encapsulé dans une IIFE
+// DASHBOARD.HTML - Affichage des infos
 const emailEl = document.getElementById("user-email");
 const pseudoEl = document.getElementById("user-pseudo");
 const planEl = document.getElementById("user-plan");
 const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
-  (async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (!user || error) {
-      console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
-      return;
-    }
+  if (!session || sessionError || !session.user) {
+    console.warn("Utilisateur non authentifié ou session absente", sessionError);
+    return; // NE redirige pas pour debug
+  }
 
-    emailEl.textContent = user.email;
+  const user = session.user;
+  emailEl.textContent = user.email;
 
-    const { data, error: dbError } = await supabase
-      .from("users_web")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
+  const { data, error: fetchError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
 
-    if (!data) {
-      await supabase.from("users_web").insert({
-        id: user.id,
-        email: user.email,
-        pseudo: user.user_metadata?.full_name || "",
-        Plan: "Free",
-        used_free_trial: false
-      });
-
-      pseudoEl.textContent = user.user_metadata?.full_name || "-";
-      planEl.textContent = "Free";
-      trialEl.textContent = "Non";
-    } else {
-      pseudoEl.textContent = data.pseudo || "-";
-      planEl.textContent = data.Plan || "-";
-      trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
-    }
-  })();
+  if (fetchError) {
+    console.error("Erreur lors du fetch Supabase :", fetchError);
+  } else if (data) {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  } else {
+    pseudoEl.textContent = "-";
+    planEl.textContent = "-";
+    trialEl.textContent = "-";
+  }
 
   const logoutBtn = document.getElementById("logout");
   if (logoutBtn) {
