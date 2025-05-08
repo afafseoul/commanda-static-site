@@ -1,21 +1,14 @@
-<script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
-    const supabase = createClient(
-      'https://jgdsbsgajoidkqiwndnp.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
-    );
-  
-    const { data: { session } } = await supabase.auth.getSession();
-  
-    if (!session) {
-      window.location.href = "login.html";
-    } else {
-      document.getElementById("user-email").innerText = "Connecté : " + session.user.email;
-    }
-  
-    document.getElementById("logout").addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "login.html";
-    });
-  </script>
-  
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Bienvenue</h1>
+  <p id="user-email">Chargement...</p>
+  <button id="logout">Se déconnecter</button>
+  <script type="module" src="script.js"></script>
+</body>
+</html>
