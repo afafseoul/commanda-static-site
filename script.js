@@ -14,47 +14,47 @@ if (googleLoginBtn) {
   });
 }
 
-// DASHBOARD LOGIC
+// DASHBOARD LOGIC encapsulé dans une IIFE
 const emailEl = document.getElementById("user-email");
 const pseudoEl = document.getElementById("user-pseudo");
 const planEl = document.getElementById("user-plan");
 const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
-  // Utilise getUser à la place de getSession
-  const { data: { user }, error } = await supabase.auth.getUser();
+  (async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
 
-  if (!user || error) {
-    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
-    return;
-  }
+    if (!user || error) {
+      console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+      return;
+    }
 
-  emailEl.textContent = user.email;
+    emailEl.textContent = user.email;
 
-  const { data, error: dbError } = await supabase
-    .from("users_web")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
+    const { data, error: dbError } = await supabase
+      .from("users_web")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  if (!data) {
-    // Auto-insertion si l'utilisateur n'existe pas encore
-    await supabase.from("users_web").insert({
-      id: user.id,
-      email: user.email,
-      pseudo: user.user_metadata?.full_name || "",
-      Plan: "Free",
-      used_free_trial: false
-    });
+    if (!data) {
+      await supabase.from("users_web").insert({
+        id: user.id,
+        email: user.email,
+        pseudo: user.user_metadata?.full_name || "",
+        Plan: "Free",
+        used_free_trial: false
+      });
 
-    pseudoEl.textContent = user.user_metadata?.full_name || "-";
-    planEl.textContent = "Free";
-    trialEl.textContent = "Non";
-  } else {
-    pseudoEl.textContent = data.pseudo || "-";
-    planEl.textContent = data.Plan || "-";
-    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
-  }
+      pseudoEl.textContent = user.user_metadata?.full_name || "-";
+      planEl.textContent = "Free";
+      trialEl.textContent = "Non";
+    } else {
+      pseudoEl.textContent = data.pseudo || "-";
+      planEl.textContent = data.Plan || "-";
+      trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+    }
+  })();
 
   const logoutBtn = document.getElementById("logout");
   if (logoutBtn) {
