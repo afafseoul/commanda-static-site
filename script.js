@@ -5,57 +5,48 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
 );
 
-// ========== PAGE SIGNUP / LOGIN ==========
-
+// LOGIN GOOGLE
 const googleLoginBtn = document.getElementById("google-login");
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener("click", async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/dashboard.html'
-      }
-    });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
     if (error) alert("Erreur OAuth : " + error.message);
   });
 }
 
-// ========== PAGE DASHBOARD ==========
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
 
-const dashboardEmail = document.getElementById("user-email");
-const logoutBtn = document.getElementById("logout");
+if (emailEl && pseudoEl && planEl && trialEl) {
+  supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+    if (!session || error) {
+      return; // NE REDIRIGE PAS ICI
+    }
 
-if (dashboardEmail && logoutBtn) {
-  // Attend que l'utilisateur soit chargé proprement
-  const { data: { user }, error } = await supabase.auth.getUser();
+    const user = session.user;
+    emailEl.textContent = user.email;
 
-  if (!user || error) {
-    window.location.href = "/signup.html";
-  } else {
-    dashboardEmail.textContent = "Connecté : " + user.email;
-
-    // Vérifie si user déjà dans users_web
-    const { data: existing, error: fetchError } = await supabase
+    const { data, error: dbError } = await supabase
       .from("users_web")
       .select("*")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (!existing) {
-      const { error: insertError } = await supabase.from("users_web").insert({
-        id: user.id,
-        email: user.email,
-        pseudo: user.user_metadata?.full_name || "",
-        Plan: "Free",
-        used_free_trial: false
-      });
-      if (insertError) console.error("Erreur insertion user :", insertError.message);
+    if (data) {
+      pseudoEl.textContent = data.pseudo || "-";
+      planEl.textContent = data.Plan || "-";
+      trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
     }
-  }
-
-  // Déconnexion
-  logoutBtn.addEventListener("click", async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/login.html";
   });
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
 }

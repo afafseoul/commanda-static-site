@@ -1,80 +1,20 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard - Commanda</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
 </head>
-<body>
-  <header class="header">
-    <h1>Bienvenue sur ton Dashboard</h1>
-    <button id="logout">Se déconnecter</button>
-  </header>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
 
-  <main class="container">
-    <h2>Informations du compte :</h2>
-    <ul>
-      <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
-      <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
-      <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
-      <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
-    </ul>
-  </main>
-
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-  
-    const supabase = createClient(
-      'https://jgdsbsgajoidkqiwndnp.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
-    );
-  
-    const emailField = document.getElementById("user-email");
-    const pseudoField = document.getElementById("user-pseudo");
-    const planField = document.getElementById("user-plan");
-    const trialField = document.getElementById("user-trial");
-  
-    const updateUI = async (session) => {
-      const user = session.user;
-      const { data, error } = await supabase
-        .from('users_web')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-  
-      if (error || !data) {
-        console.error("Erreur récupération DB :", error);
-        return;
-      }
-  
-      emailField.textContent = data.email;
-      pseudoField.textContent = data.pseudo || "-";
-      planField.textContent = data.Plan || "-";
-      trialField.textContent = data.used_free_trial ? "Oui" : "Non";
-    };
-  
-    // Attend qu'une session soit valide, sinon on fait rien (pas de redirection immédiate !)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) updateUI(session);
-    });
-  
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        updateUI(session);
-      } else {
-        // Attendre 3 secondes avant de rediriger (au cas où Google prend du temps)
-        setTimeout(() => {
-          supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) window.location.href = "/signup.html";
-          });
-        }, 3000);
-      }
-    });
-  
-    document.getElementById("logout").addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "/signup.html";
-    });
-  </script>   
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
 </body>
 </html>
