@@ -1,87 +1,53 @@
-const supabaseUrl = 'https://jgdsbsgajoidkqiwndnp.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // raccourci ici
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-// Gestion de l'inscription
-const signupForm = document.querySelector("#signup-form");
-if (signupForm) {
-  signupForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = signupForm.querySelector("#email").value;
-    const password = signupForm.querySelector("#password").value;
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
 
-    if (error) {
-      alert("Erreur : " + error.message);
-    } else {
-      window.location.href = "/dashboard.html";
-    }
-  });
-}
+const { data: { session }, error } = await supabase.auth.getSession();
 
-// Connexion Google
-const googleBtn = document.getElementById("google-login");
-if (googleBtn) {
-  googleBtn.addEventListener("click", async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: "https://cozy-maamoul-92d86f.netlify.app/dashboard.html"
+if (!session || error) {
+  window.location.href = "/signup.html";
+} else {
+  const user = session.user;
+  console.log("Utilisateur connecté :", user);
+
+  // Vérification et insertion éventuelle dans users_web
+  try {
+    const { data: userRecord, error: userFetchError } = await supabase
+      .from('users_web')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (!userRecord) {
+      console.log("Utilisateur non présent dans users_web. Insertion en cours…");
+      const { error: insertError } = await supabase
+        .from('users_web')
+        .insert({
+          id: user.id,
+          email: user.email,
+          pseudo: user.user_metadata?.full_name || "",
+          Plan: "Free",
+          used_free_trial: false
+        });
+
+      if (insertError) {
+        console.error("Échec de l'insertion dans users_web :", insertError.message);
+      } else {
+        console.log("Utilisateur inséré avec succès dans users_web.");
       }
-    });
-    if (error) console.error("Erreur Google :", error);
-  });
-}
-
-// Gestion de la session + récupération post-connexion OAuth
-let sessionCheckAttempts = 0;
-async function checkSession() {
-  const { data: { session }, error } = await supabase.auth.getSession();
-
-  if (!session && sessionCheckAttempts < 3) {
-    sessionCheckAttempts++;
-    setTimeout(checkSession, 500);
-    return;
-  }
-
-  if (!session || error) {
-    window.location.href = "/signup.html";
-  } else {
-    // Si session valide, tu peux maintenant charger les données ici si besoin
-    console.log("Session active :", session);
-    // Par exemple : fetchUserData(); ou afficher le dashboard
-  }
-}
-
-// Récupération automatique après redirection OAuth
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === "SIGNED_IN" && session) {
-    window.location.href = "/dashboard.html";
-  }
-});
-
-// Redirection automatique si sur le dashboard
-if (window.location.pathname.includes("dashboard.html")) {
-  checkSession();
-}
-// Redirection automatique si sur le dashboard
-if (window.location.pathname.includes("dashboard.html")) {
-  (async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (!user || error) {
-      window.location.href = "/signup.html";
-      return;
     }
+  } catch (e) {
+    console.error("Erreur inattendue lors de la vérification users_web :", e);
+  }
 
-    // 🔥 Session confirmée, appelle ici ta fonction d'affichage si tu en as une
-    console.log("Utilisateur connecté :", user);
-
-    // Exemple rapide :
-    document.getElementById("welcome-msg").innerText = `Bienvenue, ${user.user_metadata.full_name || "Utilisateur"} !`;
-  })();
+  document.getElementById("user-email").textContent = "Connecté : " + user.email;
 }
+
+document.getElementById("logout").addEventListener("click", async () => {
+  await supabase.auth.signOut();
+  window.location.href = "/login.html";
+});
