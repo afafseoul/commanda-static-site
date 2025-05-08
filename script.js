@@ -5,7 +5,7 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
 );
 
-// LOGIN GOOGLE
+// LOGIN AVEC GOOGLE
 const googleLoginBtn = document.getElementById("google-login");
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener("click", async () => {
@@ -14,18 +14,16 @@ if (googleLoginBtn) {
   });
 }
 
-// DASHBOARD SESSION
+// DASHBOARD + USER INSERTION
 const dashboardEmail = document.getElementById("user-email");
 if (dashboardEmail) {
-  supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-    if (!session || error) {
-      window.location.href = "/signup.html";
-      return;
-    }
-    const user = session.user;
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    window.location.href = "/signup.html";
+  } else {
     dashboardEmail.textContent = "Connecté : " + user.email;
 
-    // Check user in users_web
     const { data: existingUser, error: fetchErr } = await supabase
       .from("users_web")
       .select("*")
@@ -33,16 +31,18 @@ if (dashboardEmail) {
       .maybeSingle();
 
     if (!existingUser) {
-      await supabase.from("users_web").insert({
+      const { error: insertErr } = await supabase.from("users_web").insert({
         id: user.id,
         email: user.email,
         pseudo: user.user_metadata?.full_name || '',
         Plan: "Free",
         used_free_trial: false
       });
+      if (insertErr) console.error("Erreur insertion users_web :", insertErr.message);
     }
-  });
+  }
 
+  // BOUTON DECONNEXION
   document.getElementById("logout").addEventListener("click", async () => {
     await supabase.auth.signOut();
     window.location.href = "/signup.html";
