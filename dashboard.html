@@ -29,29 +29,38 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
     );
   
-    const sessionResult = await supabase.auth.getSession();
-    const session = sessionResult.data.session;
+    const updateUI = async (session) => {
+      const user = session.user;
   
-    if (!session || sessionResult.error) {
-      window.location.href = "/signup.html";
-    }
+      const { data: userData, error } = await supabase
+        .from("users_web")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
   
-    const user = session.user;
+      if (error || !userData) {
+        console.error("Erreur lors de la récupération des données :", error);
+        return;
+      }
   
-    const { data: userData, error } = await supabase
-      .from("users_web")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
-  
-    if (error || !userData) {
-      console.error("Erreur lors de la récupération des données Supabase :", error);
-    } else {
       document.getElementById("user-email").textContent = userData.email;
       document.getElementById("user-pseudo").textContent = userData.pseudo || "-";
       document.getElementById("user-plan").textContent = userData.Plan || "-";
       document.getElementById("user-trial").textContent = userData.used_free_trial ? "Oui" : "Non";
+    };
+  
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      updateUI(session);
     }
+  
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        updateUI(session);
+      } else {
+        window.location.href = "/signup.html";
+      }
+    });
   
     document.getElementById("logout").addEventListener("click", async () => {
       await supabase.auth.signOut();
