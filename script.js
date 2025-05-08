@@ -21,38 +21,40 @@ const planEl = document.getElementById("user-plan");
 const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
-  supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-    if (!session || error) return;
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-    const user = session.user;
-    emailEl.textContent = user.email;
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
 
-    // 🔍 Check if user already exists
-    const { data, error: dbError } = await supabase
-      .from("users_web")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
+  emailEl.textContent = user.email;
 
-    if (!data) {
-      // ✅ Auto insert user in users_web
-      await supabase.from("users_web").insert({
-        id: user.id,
-        email: user.email,
-        pseudo: user.user_metadata?.full_name || "",
-        Plan: "Free",
-        used_free_trial: false
-      });
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
 
-      pseudoEl.textContent = user.user_metadata?.full_name || "-";
-      planEl.textContent = "Free";
-      trialEl.textContent = "Non";
-    } else {
-      pseudoEl.textContent = data.pseudo || "-";
-      planEl.textContent = data.Plan || "-";
-      trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
-    }
-  });
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
 
   const logoutBtn = document.getElementById("logout");
   if (logoutBtn) {
