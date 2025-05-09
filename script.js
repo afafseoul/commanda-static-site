@@ -14,7 +14,7 @@ if (googleLoginBtn) {
   });
 }
 
-// DASHBOARD
+// DASHBOARD LOGIC
 const emailEl = document.getElementById("user-email");
 const pseudoEl = document.getElementById("user-pseudo");
 const planEl = document.getElementById("user-plan");
@@ -22,49 +22,64 @@ const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
   (async () => {
-    const {
-      data: { session },
-      error: sessionError
-    } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const session = sessionData?.session;
 
-    if (!session || sessionError || !session.user) {
+    if (!session || sessionError) {
       console.warn("Utilisateur non authentifié ou session absente", session);
-      return;
+      return; // Pas de redirection brutale pour pouvoir débugger
     }
 
     const user = session.user;
+    if (!user?.id) {
+      console.error("User ID manquant");
+      return;
+    }
+
     emailEl.textContent = user.email;
 
-    const { data: existing, error: fetchError } = await supabase
+    const { data: existingUser, error: fetchError } = await supabase
       .from("users_web")
       .select("*")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (!existing) {
-      await supabase.from("users_web").insert({
+    if (fetchError) {
+      console.error("Erreur DB fetch", fetchError);
+      return;
+    }
+
+    if (!existingUser) {
+      const { error: insertError } = await supabase.from("users_web").insert({
         id: user.id,
         email: user.email,
-        pseudo: user.user_metadata?.full_name || '',
+        pseudo: user.user_metadata?.full_name || "",
         Plan: "Free",
         used_free_trial: false
       });
+
+      if (insertError) {
+        console.error("Erreur DB insert", insertError);
+      } else {
+        console.log("Nouvel utilisateur inséré");
+      }
+
+      // Recharge les infos après insertion
+      pseudoEl.textContent = user.user_metadata?.full_name || "-";
       planEl.textContent = "Free";
-      pseudoEl.textContent = user.user_metadata?.full_name || '';
       trialEl.textContent = "Non";
     } else {
-      pseudoEl.textContent = existing.pseudo || "-";
-      planEl.textContent = existing.Plan || "-";
-      trialEl.textContent = existing.used_free_trial ? "Oui" : "Non";
+      pseudoEl.textContent = existingUser.pseudo || "-";
+      planEl.textContent = existingUser.Plan || "-";
+      trialEl.textContent = existingUser.used_free_trial ? "Oui" : "Non";
     }
   })();
-}
 
-// BOUTON DECONNEXION
-const logoutBtn = document.getElementById("logout");
-if (logoutBtn) {
-  logoutBtn.addEventListener("click", async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/signup.html";
-  });
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
 }
