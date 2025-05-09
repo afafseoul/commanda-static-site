@@ -1,3 +1,5 @@
-git add .
-git commit -m "Ajout des nouvelles modifications"
-git push origin main
+gitpub "txt"
+
+
+
+donne moi un prompt avec l'ensemble de toute les infos qu'on a fait dont ja'ai besoin. Je veux un prompt a copier coller dans un nouveaux chat avec chatgpt4o pour que je puisse reprendre exactement de la m^me manière avec lui. Je veux que tu me fasse un prompt qui parle de ABSOLUMENT TOUT FAIT 5000 lignes minimu les anciens codes le code actuelle mes objectifs TOUT! PAS de canva un prompt a copier coller.

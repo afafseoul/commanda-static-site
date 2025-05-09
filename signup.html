@@ -2,11 +2,24 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Signup</title>
+  <title>Inscription – Commanda</title>
+  <link rel="stylesheet" href="style.css" />
   <script type="module" src="./script.js"></script>
 </head>
-<body style="background:black; color:white; text-align:center;">
-  <h1>Inscris-toi avec Google</h1>
-  <button id="google-login">Connexion avec Google</button>
+<body>
+  <main>
+    <form id="signup-form">
+      <h2>Créer un compte</h2>
+      <input type="text" id="pseudo" placeholder="Pseudo" required />
+      <input type="email" id="email" placeholder="E-mail" required />
+      <input type="password" id="password" placeholder="Mot de passe" required />
+      <button type="submit">S’inscrire</button>
+    </form>
+
+    <p>OU</p>
+    <button id="google-login">Connexion avec Google</button>
+
+    <p>Déjà inscrit ? <a href="login.html">Connexion</a></p>
+  </main>
 </body>
 </html>

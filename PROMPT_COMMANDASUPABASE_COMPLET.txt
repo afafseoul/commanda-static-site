@@ -1,0 +1,5102 @@
+Tu es un assistant expert en développement web (frontend/backend), SAAS, Supabase, Make.com, et Netlify. Tu reprends exactement le même projet que celui décrit ci-dessous. Je veux que tu continues à m'aider comme si tu étais dans la continuité directe du chat précédent.
+
+Voici TOUT ce que tu dois savoir sur le contexte, les objectifs, l'état du code, les bugs rencontrés et les corrections appliquées jusqu'à présent. Ce texte contient l'historique complet pour te synchroniser intégralement.
+
+-----------------
+🧠 CONTEXTE GLOBAL :
+-----------------
+- Je m'appelle Adrien.
+- Je vis en Corée avec un visa Working Holiday.
+- Je développe un SAAS appelé Commanda, déployé sur Netlify.
+- Le but du site : permettre à un utilisateur de se connecter avec Google (OAuth), d'être redirigé vers un dashboard, et d'afficher les infos depuis Supabase.
+- Le backend est 100% Supabase (auth + base de données).
+- Le frontend est en HTML/CSS/JS vanilla.
+- Le SAAS utilise : Signup avec Google, stockage de l'utilisateur dans `users_web`, dashboard dynamique.
+
+-------------------------
+📦 STRUCTURE DU PROJET :
+-------------------------
+- `signup.html` : bouton "Connexion avec Google", redirige vers dashboard.
+- `dashboard.html` : affiche email, pseudo, Plan, used_free_trial, + bouton logout.
+- `script.js` : unique fichier JS pour tout gérer (auth, insert, dashboard).
+- Le site est hébergé sur Netlify à l’adresse : https://cozy-maamoul-92d86f.netlify.app
+- Supabase gère : auth (Google), table `users_web`, policies RLS activées.
+
+-------------------------
+📁 TABLE SUPABASE :
+-------------------------
+Nom : `users_web`
+Colonnes :
+- id (uuid) → lié à auth.user.id
+- email (text)
+- pseudo (text)
+- Plan (text)
+- used_free_trial (bool)
+RLS activées, mais policies simples : `SELECT` / `INSERT` autorisé si `id = auth.uid()`.
+
+-------------------------
+🛠️ COMPORTEMENT ATTENDU :
+-------------------------
+1. Sur signup.html, on clique sur "Connexion avec Google".
+2. L’utilisateur est redirigé vers /dashboard.html avec un token.
+3. Le script échange ce token contre une session persistante (via `exchangeCodeForSession()`).
+4. Si l’utilisateur n’existe pas dans `users_web`, il est automatiquement ajouté avec les valeurs par défaut.
+5. Sur le dashboard, les infos s'affichent dynamiquement :
+   - email
+   - pseudo
+   - plan
+   - essai gratuit utilisé
+
+-------------------------
+❌ PROBLÈMES RENCONTRÉS :
+-------------------------
+- `getSession()` retournait `null` à cause de token OAuth expiré (ou non échangé).
+- Mauvais usage de `supabase.auth.getUser()` au lieu de `getSession()`.
+- Tentative d’`import` ES6 (`import { createClient } ...`) sans `type="module"` : causait `Cannot use import statement outside a module`.
+- Mauvaise API key utilisée (clé de service admin au lieu de la `anon` public key → causait `Invalid API key`).
+- Mauvaise gestion de l’insertion dans `users_web` (ajoutait des lignes vides avec `null`).
+- L’utilisateur n'était pas inséré dans Supabase Auth si supprimé depuis `auth.users`.
+- Le redirect OAuth n’effaçait pas le token dans l’URL → causait des erreurs `401 Unauthorized`.
+- Certains scripts JS étaient trop rapides → le token OAuth expirait (>120s) avant usage.
+
+-------------------------
+✅ CORRECTIONS APPLIQUÉES :
+-------------------------
+- Passage complet à `exchangeCodeForSession()` dès détection d’un `access_token` dans l’URL.
+- Nettoyage de l’URL après redirection OAuth avec `window.history.replaceState(...)`.
+- Remplacement complet des `import` par `<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>`.
+- Ajout d’un fallback de session (`getSession()` seulement après `exchangeCodeForSession()`).
+- Détection propre de `user.id`, `user.email`, `user_metadata.full_name`, etc.
+- Validation automatique dans Supabase des URLs autorisées : https://cozy-maamoul-92d86f.netlify.app
+- Vérification que chaque insertion dans `users_web` est conditionnée à l’existence réelle de `user.id`.
+
+-------------------------
+📜 VERSION ACTUELLE DES FICHIERS :
+-------------------------
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
+
+# CONTINUATION
+
+
+===== signup.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>
+
+===== dashboard.html =====
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Bienvenue sur ton Dashboard</h1>
+  <button id="logout">Se déconnecter</button>
+
+  <h2>Informations du compte :</h2>
+  <ul>
+    <li><strong>Email :</strong> <span id="user-email">Chargement...</span></li>
+    <li><strong>Pseudo :</strong> <span id="user-pseudo">Chargement...</span></li>
+    <li><strong>Plan :</strong> <span id="user-plan">Chargement...</span></li>
+    <li><strong>Essai gratuit utilisé :</strong> <span id="user-trial">Chargement...</span></li>
+  </ul>
+</body>
+</html>
+
+===== script.js =====
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://jgdsbsgajoidkqiwndnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+);
+
+// LOGIN GOOGLE
+const googleLoginBtn = document.getElementById("google-login");
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) alert("Erreur OAuth : " + error.message);
+  });
+}
+
+// DASHBOARD LOGIC
+const emailEl = document.getElementById("user-email");
+const pseudoEl = document.getElementById("user-pseudo");
+const planEl = document.getElementById("user-plan");
+const trialEl = document.getElementById("user-trial");
+
+if (emailEl && pseudoEl && planEl && trialEl) {
+  // Utilise getUser à la place de getSession
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (!user || error) {
+    console.warn("Utilisateur non authentifié ou erreur Supabase :", error);
+    return;
+  }
+
+  emailEl.textContent = user.email;
+
+  const { data, error: dbError } = await supabase
+    .from("users_web")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    // Auto-insertion si l'utilisateur n'existe pas encore
+    await supabase.from("users_web").insert({
+      id: user.id,
+      email: user.email,
+      pseudo: user.user_metadata?.full_name || "",
+      Plan: "Free",
+      used_free_trial: false
+    });
+
+    pseudoEl.textContent = user.user_metadata?.full_name || "-";
+    planEl.textContent = "Free";
+    trialEl.textContent = "Non";
+  } else {
+    pseudoEl.textContent = data.pseudo || "-";
+    planEl.textContent = data.Plan || "-";
+    trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+  }
+
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/signup.html";
+    });
+  }
+}
