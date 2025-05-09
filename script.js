@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (user) {
       const { data: existing } = await supabase
         .from('users_web')
-        .select('id')
+        .select('*')
         .eq('id', user.id)
         .maybeSingle()
 
@@ -107,6 +107,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           Plan: 'Free',
           used_free_trial: false
         })
+      } else {
+        if (!existing.pseudo) {
+          await supabase
+            .from('users_web')
+            .update({ pseudo: user.user_metadata?.name || '' })
+            .eq('id', user.id)
+        }
       }
     }
 
