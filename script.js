@@ -5,8 +5,6 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNDg4NDcsImV4cCI6MjA2MTgyNDg0N30.7h5X4HUlX2hylPpcJfRxPeHezJYlPommJZIYLbu1kSY'
 );
 
-
-
 // 🔁 Dashboard (lecture session + insertion dans users_web)
 const emailEl = document.getElementById("user-email");
 const pseudoEl = document.getElementById("user-pseudo");
@@ -15,18 +13,19 @@ const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
   (async () => {
-    // 1. Si on vient d'un login Google, on échange l’access_token
-    const hash = window.location.hash;
-    if (hash.includes("access_token")) {
-      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+    // ✅ Étape 1 – échange du code OAuth si présent dans l'URL
+    const url = window.location.href;
+    if (url.includes("?code=")) {
+      const { error } = await supabase.auth.exchangeCodeForSession(url);
       if (error) {
         console.error("Erreur exchangeCodeForSession :", error.message);
         return;
       }
+      // Nettoie l'URL après échange
       window.history.replaceState({}, document.title, "/dashboard.html");
     }
 
-    // 2. Récupération de session
+    // ✅ Étape 2 – récupération de la session utilisateur
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (!session || sessionError) {
       console.warn("Pas de session", sessionError);
@@ -36,7 +35,7 @@ if (emailEl && pseudoEl && planEl && trialEl) {
     const user = session.user;
     emailEl.textContent = user.email;
 
-    // 3. Enregistrement ou lecture dans users_web
+    // ✅ Étape 3 – récupération ou insertion dans users_web
     const { data: existing, error: fetchError } = await supabase
       .from("users_web")
       .select("*")
@@ -44,13 +43,15 @@ if (emailEl && pseudoEl && planEl && trialEl) {
       .maybeSingle();
 
     if (!existing) {
-      await supabase.from("users_web").insert({
+      const { error: insertError } = await supabase.from("users_web").insert({
         id: user.id,
         email: user.email,
         pseudo: user.user_metadata?.full_name || '',
         Plan: "Free",
         used_free_trial: false
       });
+      if (insertError) console.error("Erreur insertion :", insertError.message);
+
       pseudoEl.textContent = user.user_metadata?.full_name || '-';
       planEl.textContent = "Free";
       trialEl.textContent = "Non";
@@ -61,7 +62,7 @@ if (emailEl && pseudoEl && planEl && trialEl) {
     }
   })();
 
-  // Déconnexion
+  // ✅ Déconnexion
   const logoutBtn = document.getElementById("logout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
@@ -85,7 +86,7 @@ if (googleLoginBtn) {
   });
 }
 
-// ✍️ Formulaire signup manuel
+// ✍️ Formulaire signup manuel (email + mot de passe)
 const signupForm = document.getElementById("signup-form");
 if (signupForm) {
   signupForm.addEventListener("submit", async (e) => {
