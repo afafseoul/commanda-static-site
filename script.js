@@ -32,8 +32,72 @@ const loadUserData = async () => {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const signupForm = document.getElementById('signup-form')
+  const loginForm = document.getElementById('login-form')
+  const googleLoginBtn = document.getElementById('google-login')
   const logoutBtn = document.getElementById('logout-btn')
 
+  // ✅ SIGNUP classique
+  if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const pseudo = document.getElementById('pseudo').value
+      const email = document.getElementById('email').value
+      const password = document.getElementById('password').value
+
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({ email, password })
+      if (signupError) return alert('Erreur : ' + signupError.message)
+
+      const user = signupData.user
+      if (user) {
+        const { error: insertError } = await supabase.from('users_web').insert({
+          id: user.id,
+          email,
+          pseudo,
+          Plan: 'Free',
+          used_free_trial: false
+        })
+
+        if (insertError) console.error("❌ Erreur insert (signup) :", insertError.message)
+        else console.log("✅ Signup insert OK")
+      }
+
+      window.location.href = 'dashboard.html'
+    })
+  }
+
+  // ✅ LOGIN classique
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const email = document.getElementById('email').value
+      const password = document.getElementById('password').value
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) return alert('Erreur : ' + error.message)
+
+      window.location.href = 'dashboard.html'
+    })
+  }
+
+  // ✅ LOGIN Google
+  if (googleLoginBtn) {
+    googleLoginBtn.addEventListener('click', async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard.html'
+        }
+      })
+      if (error) {
+        console.error('Erreur Google :', error.message)
+      } else {
+        console.log('✅ Redirection vers Google OAuth...')
+      }
+    })
+  }
+
+  // ✅ LOGOUT
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       await supabase.auth.signOut()
@@ -41,6 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
+  // ✅ GESTION AUTOMATIQUE DANS DASHBOARD
   if (window.location.pathname.includes('dashboard.html')) {
     const { data: sessionData } = await supabase.auth.getSession()
     const session = sessionData?.session
