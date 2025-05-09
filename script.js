@@ -12,7 +12,7 @@ const loadUserData = async () => {
   if (!session) return
 
   const user = session.user
-  document.getElementById('email').textContent = user.email
+  document.getElementById('user-email').textContent = user.email
 
   const { data: userData } = await supabase
     .from('users_web')
@@ -21,9 +21,9 @@ const loadUserData = async () => {
     .single()
 
   if (userData) {
-    document.getElementById('pseudo').textContent = userData.pseudo || '-'
-    document.getElementById('plan').textContent = userData.Plan || '-'
-    document.getElementById('free-trial').textContent = userData.used_free_trial ? 'Oui' : 'Non'
+    document.getElementById('user-pseudo').textContent = userData.pseudo || '-'
+    document.getElementById('user-plan').textContent = userData.Plan || '-'
+    document.getElementById('user-trial').textContent = userData.used_free_trial ? 'Oui' : 'Non'
   }
 }
 
