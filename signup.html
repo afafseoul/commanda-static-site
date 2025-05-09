@@ -1,45 +1,12 @@
-<!-- ... (le reste de la page) -->
-
-<form id="signup-form">
-  <h2>Créer mon compte</h2>
-  <input type="text" id="full-name" placeholder="Nom complet" required />
-  <input type="email" id="email" placeholder="E-mail" required />
-  <input type="password" id="password" placeholder="Mot de passe" required />
-  <button type="submit">Créer mon compte</button>
-</form>
-
-<button id="google-login">Continuer avec Google</button>
-
-<p>Déjà inscrit ? <a href="login.html">Se connecter</a></p>
-
-<script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
-  const supabase = createClient(
-    'https://jgdsbsgajoidkqiwndnp.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
-  );
-
-  const form = document.getElementById("signup-form");
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    const { data, error } = await supabase.auth.signUp({ email, password });
-
-    if (error) {
-      alert("Erreur : " + error.message);
-    } else {
-      window.location.href = "dashboard.html";
-    }
-  });
-
-  document.getElementById("google-login").addEventListener("click", async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: "https://cozy-maamoul-92d86f.netlify.app/dashboard.html"
-      }
-    });
-  });
-</script>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+  <script type="module" src="./script.js"></script>
+</head>
+<body style="background:black; color:white; text-align:center;">
+  <h1>Inscris-toi avec Google</h1>
+  <button id="google-login">Connexion avec Google</button>
+</body>
+</html>

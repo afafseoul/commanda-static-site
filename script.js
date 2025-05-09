@@ -2,10 +2,10 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const supabase = createClient(
   'https://jgdsbsgajoidkqiwndnp.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
+  'public-anon-key-ici' // ← ⚠️ Remplace par TA PUBLIC ANON KEY (non l'admin secret key !)
 );
 
-// === LOGIN ===
+// Connexion Google
 const googleLoginBtn = document.getElementById("google-login");
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener("click", async () => {
@@ -14,7 +14,7 @@ if (googleLoginBtn) {
   });
 }
 
-// === DASHBOARD ===
+// Dashboard
 const emailEl = document.getElementById("user-email");
 const pseudoEl = document.getElementById("user-pseudo");
 const planEl = document.getElementById("user-plan");
@@ -22,7 +22,7 @@ const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
   (async () => {
-    // 1. Si URL contient un access_token (via Google OAuth), on valide la session via l’URL
+    // 1. Si token OAuth dans l’URL : on l’échange contre une session
     const hash = window.location.hash;
     if (hash.includes("access_token")) {
       const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
@@ -30,11 +30,10 @@ if (emailEl && pseudoEl && planEl && trialEl) {
         console.error("Erreur d’échange de session :", error.message);
         return;
       }
-      // Nettoie l’URL
       window.history.replaceState({}, document.title, "/dashboard.html");
     }
 
-    // 2. Maintenant qu'on est sûr d’avoir échangé le token, on récupère la session
+    // 2. Récupération session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (!session || sessionError) {
       console.warn("Utilisateur non authentifié ou session absente", sessionError);
@@ -44,7 +43,7 @@ if (emailEl && pseudoEl && planEl && trialEl) {
     const user = session.user;
     emailEl.textContent = user.email;
 
-    // 3. Vérifie si l'utilisateur existe déjà dans users_web
+    // 3. Chargement ou insertion dans users_web
     const { data: existing, error: fetchError } = await supabase
       .from("users_web")
       .select("*")
