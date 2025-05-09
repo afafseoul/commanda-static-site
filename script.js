@@ -137,5 +137,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     await loadUserData()
+
+    // ✅ Formulaire de mise à jour du pseudo ou email
+    const updateForm = document.getElementById('update-form')
+    if (updateForm) {
+      updateForm.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const newPseudo = document.getElementById('new-pseudo').value
+        const newEmail = document.getElementById('new-email').value
+        const updates = {}
+        if (newPseudo) updates.pseudo = newPseudo
+        if (newEmail) updates.email = newEmail
+
+        const { error: updateError } = await supabase
+          .from('users_web')
+          .update(updates)
+          .eq('id', user.id)
+
+        if (updateError) {
+          console.error("❌ Erreur UPDATE :", updateError.message)
+          document.getElementById('update-status').textContent = '❌ Erreur : ' + updateError.message
+        } else {
+          console.log("✅ UPDATE effectué")
+          document.getElementById('update-status').textContent = '✅ Informations mises à jour'
+          await loadUserData()
+        }
+      })
+    }
   }
 })
