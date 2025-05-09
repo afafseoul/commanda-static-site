@@ -8,7 +8,6 @@ const supabase = createClient(
 const loadUserData = async () => {
   const { data: sessionData } = await supabase.auth.getSession()
   const session = sessionData.session
-
   if (!session) return
 
   const user = session.user
@@ -40,16 +39,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       const email = document.getElementById('email').value
       const password = document.getElementById('password').value
 
-      const { data, error } = await supabase.auth.signUp({ email, password })
-      if (error) return alert('Erreur : ' + error.message)
+      const { error: signupError } = await supabase.auth.signUp({ email, password })
+      if (signupError) return alert('Erreur : ' + signupError.message)
 
-      await supabase.from('users_web').insert({
-        id: data.user.id,
-        email,
-        pseudo,
-        Plan: 'Free',
-        used_free_trial: false
-      })
+      // Déconnexion du compte Google actuel (au cas où)
+      await supabase.auth.signOut()
+
+      // Connexion manuelle avec l'utilisateur qu'on vient de créer
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+      if (loginError) return alert('Erreur login après signup : ' + loginError.message)
+
+      const user = loginData.user
+      if (user) {
+        await supabase.from('users_web').insert({
+          id: user.id,
+          email: user.email,
+          pseudo,
+          Plan: 'Free',
+          used_free_trial: false
+        })
+      }
 
       window.location.href = 'dashboard.html'
     })
