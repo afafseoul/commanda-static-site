@@ -111,13 +111,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       .maybeSingle()
 
     if (!existing) {
-      await supabase.from('users_web').insert({
+      const { error: insertError } = await supabase.from('users_web').insert({
         id: user.id,
         email: user.email,
         pseudo: user.user_metadata?.name || user.user_metadata?.full_name || '',
         Plan: 'Free',
         used_free_trial: false
       })
+      
+      if (insertError) {
+        console.error("❌ Erreur insertion dans users_web :", insertError.message)
+      } else {
+        console.log("✅ Utilisateur inséré dans users_web avec pseudo :", user.user_metadata?.name)
+      }      
     } else if (!existing.pseudo) {
       await supabase
         .from('users_web')
