@@ -7,7 +7,7 @@ const supabase = createClient(
 
 const loadUserData = async () => {
   const { data: sessionData } = await supabase.auth.getSession()
-  const session = sessionData.session
+  const session = sessionData?.session
   if (!session) return
 
   const user = session.user
@@ -27,54 +27,7 @@ const loadUserData = async () => {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const signupForm = document.getElementById('signup-form')
-  const loginForm = document.getElementById('login-form')
-  const googleBtn = document.getElementById('google-login') || document.getElementById('google-signup')
   const logoutBtn = document.getElementById('logout')
-
-  if (signupForm) {
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      const pseudo = document.getElementById('pseudo').value
-      const email = document.getElementById('email').value
-      const password = document.getElementById('password').value
-
-      const { error: signupError } = await supabase.auth.signUp({ email, password })
-      if (signupError) return alert('Erreur : ' + signupError.message)
-
-      await supabase.auth.signOut()
-
-      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-      if (loginError) return alert('Erreur login après signup : ' + loginError.message)
-
-      window.location.href = 'dashboard.html'
-    })
-  }
-
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      const email = document.getElementById('email').value
-      const password = document.getElementById('password').value
-
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) return alert('Erreur : ' + error.message)
-
-      window.location.href = 'dashboard.html'
-    })
-  }
-
-  if (googleBtn) {
-    googleBtn.addEventListener('click', async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/dashboard.html'
-        }
-      })
-      if (error) alert('Erreur Google : ' + error.message)
-    })
-  }
 
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
@@ -83,38 +36,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
-  // ⚡ Partie exécutée quand on arrive sur le dashboard
   if (window.location.pathname.includes('dashboard.html')) {
     const { data: sessionData } = await supabase.auth.getSession()
     const session = sessionData?.session
     if (!session) return
 
-    const { data: userData } = await supabase.auth.getUser()
-    const user = userData?.user
-    if (!user) return
+    const user = session.user
+    const email = user.email
+    const pseudo = user.user_metadata?.name || user.user_metadata?.full_name || 'Inconnu'
 
-    const { data: existing } = await supabase
+    // Vérifie si l'utilisateur existe déjà dans la table users_web
+    const { data: existingUser, error: selectError } = await supabase
       .from('users_web')
       .select('*')
       .eq('id', user.id)
       .maybeSingle()
 
-    if (!existing) {
-      const insertResponse = await supabase.from('users_web').insert({
+    if (selectError) {
+      console.error('Erreur SELECT users_web :', selectError)
+    }
+
+    if (!existingUser) {
+      const { error: insertError } = await supabase.from('users_web').insert({
         id: user.id,
-        email: user.email,
-        pseudo: user.user_metadata?.full_name || user.user_metadata?.name || '',
+        email,
+        pseudo,
         Plan: 'Free',
         used_free_trial: false
       })
-
-      if (insertResponse.error) {
-        console.error('❌ Erreur insertion :', insertResponse.error.message)
+      if (insertError) {
+        console.error('Erreur INSERT users_web :', insertError)
       } else {
-        console.log('✅ Utilisateur inséré automatiquement')
+        console.log('✅ Nouvel utilisateur inséré automatiquement')
       }
     } else {
-      console.log('ℹ️ Utilisateur déjà présent dans users_web')
+      // Met à jour l'email et le pseudo s'ils sont différents
+      const updateFields = {}
+      if (existingUser.email !== email) updateFields.email = email
+      if (existingUser.pseudo !== pseudo) updateFields.pseudo = pseudo
+
+      if (Object.keys(updateFields).length > 0) {
+        const { error: updateError } = await supabase
+          .from('users_web')
+          .update(updateFields)
+          .eq('id', user.id)
+
+        if (updateError) {
+          console.error('Erreur UPDATE users_web :', updateError)
+        } else {
+          console.log('✅ Utilisateur mis à jour automatiquement')
+        }
+      }
     }
 
     await loadUserData()
