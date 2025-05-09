@@ -1,86 +1,98 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 
 const supabase = createClient(
   'https://jgdsbsgajoidkqiwndnp.supabase.co',
-  'SUPABASE_ANON_KEY'
-);
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNDg4NDcsImV4cCI6MjA2MTgyNDg0N30.7h5X4HUlX2hylPpcJfRxPeHezJYlPommJZIYLbu1kSY'
+)
 
-document.getElementById('logout-btn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  window.location.href = 'login.html';
-});
+const loadUserData = async () => {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const session = sessionData?.session
+  if (!session) return
 
-async function initDashboard() {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const user = session.user
 
-  if (userError || !user) {
-    console.error('Erreur utilisateur : ', userError);
-    return (window.location.href = 'login.html');
-  }
-
-  const userId = user.id;
-
-  // Vérifie si le user est déjà dans users_web
-  const { data: existingUser, error: existingError } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('users_web')
     .select('*')
-    .eq('id', userId)
-    .single();
+    .eq('id', user.id)
+    .single()
 
-  if (existingError && existingError.code !== 'PGRST116') {
-    console.error('Erreur de vérification :', existingError);
-    return;
+  if (userError) {
+    console.error("❌ Erreur lecture users_web :", userError.message)
+    return
   }
 
-  if (!existingUser) {
-    // Insert automatique si absent
-    const { error: insertError } = await supabase.from('users_web').insert({
-      id: userId,
-      email: user.email,
-      pseudo: user.user_metadata.full_name,
-    });
-
-    if (insertError) {
-      console.error('Erreur d’insertion :', insertError);
-    } else {
-      console.log('✅ Utilisateur ajouté automatiquement');
-    }
-  } else {
-    // Update automatique si email ou pseudo sont null
-    const updates = {};
-    if (!existingUser.email) updates.email = user.email;
-    if (!existingUser.pseudo) updates.pseudo = user.user_metadata.full_name;
-
-    if (Object.keys(updates).length > 0) {
-      const { error: updateError } = await supabase
-        .from('users_web')
-        .update(updates)
-        .eq('id', userId);
-
-      if (updateError) {
-        console.error('Erreur de mise à jour automatique :', updateError);
-      } else {
-        console.log('✅ Utilisateur mis à jour automatiquement');
-      }
-    }
+  if (userData) {
+    document.getElementById('user-email').textContent = userData.email || '-'
+    document.getElementById('user-pseudo').textContent = userData.pseudo || '-'
+    document.getElementById('user-plan').textContent = userData.Plan || '-'
+    document.getElementById('user-trial').textContent = userData.used_free_trial ? 'Oui' : 'Non'
   }
-
-  // Relecture finale
-  const { data: userData, error: readError } = await supabase
-    .from('users_web')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (readError) {
-    console.error('Erreur de récupération finale :', readError);
-    return;
-  }
-
-  document.getElementById('user-email').textContent = userData.email || '–';
-  document.getElementById('user-pseudo').textContent = userData.pseudo || '–';
-  document.getElementById('user-plan').textContent = userData.Plan || '–';
-  document.getElementById('user-trial').textContent = userData.used_free_trial ? 'Oui' : 'Non';
 }
 
-initDashboard();
+document.addEventListener('DOMContentLoaded', async () => {
+  const logoutBtn = document.getElementById('logout-btn')
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut()
+      window.location.href = 'index.html'
+    })
+  }
+
+  if (window.location.pathname.includes('dashboard.html')) {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const session = sessionData?.session
+    if (!session) return
+
+    const user = session.user
+    const email = user.email
+    const pseudo = user.user_metadata?.name || user.user_metadata?.full_name || 'Inconnu'
+
+    const { data: existingUser, error: selectError } = await supabase
+      .from('users_web')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (selectError && selectError.code !== 'PGRST116') {
+      console.error('Erreur SELECT users_web :', selectError)
+      return
+    }
+
+    if (!existingUser) {
+      const { error: insertError } = await supabase.from('users_web').insert({
+        id: user.id,
+        email,
+        pseudo,
+        Plan: 'Free',
+        used_free_trial: false
+      })
+      if (insertError) {
+        console.error('Erreur INSERT users_web :', insertError)
+      } else {
+        console.log('✅ Utilisateur inséré automatiquement')
+      }
+    } else {
+      const updates = {}
+      if (!existingUser.email || existingUser.email === '') updates.email = email
+      if (!existingUser.pseudo || existingUser.pseudo === '') updates.pseudo = pseudo
+
+      if (Object.keys(updates).length > 0) {
+        const { error: updateError } = await supabase
+          .from('users_web')
+          .update(updates)
+          .eq('id', user.id)
+
+        if (updateError) {
+          console.error('Erreur UPDATE users_web :', updateError)
+        } else {
+          console.log('✅ Utilisateur mis à jour automatiquement')
+        }
+      }
+    }
+
+    await loadUserData()
+  }
+})
