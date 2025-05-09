@@ -1,44 +1,78 @@
-<script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
-  const supabase = createClient(
-    'https://jgdsbsgajoidkqiwndnp.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNDg4NDcsImV4cCI6MjA2MTgyNDg0N30.7h5X4HUlX2hylPpcJfRxPeHezJYlPommJZIYLbu1kSY'
-  );
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="form-container">
+    <h2>Connexion</h2>
+    <form id="login-form">
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="password" id="password" placeholder="Mot de passe" required>
+      <button type="submit">Se connecter</button>
+    </form>
 
-  const form = document.getElementById("login-form");
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+    <p>OU</p>
+    <button id="google-login">Connexion avec Google</button>
 
-    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password
+    <p>Pas encore inscrit ? <a href="signup.html">Créer un compte</a></p>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    const supabase = createClient(
+      'https://jgdsbsgajoidkqiwndnp.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNDg4NDcsImV4cCI6MjA2MTgyNDg0N30.7h5X4HUlX2hylPpcJfRxPeHezJYlPommJZIYLbu1kSY'
+    );
+
+    // Connexion email/password
+    const form = document.getElementById("login-form");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (loginError) {
+        alert("Erreur : " + loginError.message);
+      } else {
+        const user = loginData.user;
+
+        const { data: existing } = await supabase
+          .from("users_web")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("users_web").insert({
+            id: user.id,
+            email: user.email,
+            pseudo: user.user_metadata?.full_name || '',
+            Plan: "Free",
+            used_free_trial: false
+          });
+        }
+
+        window.location.href = "dashboard.html";
+      }
     });
 
-    if (loginError) {
-      alert("Erreur : " + loginError.message);
-    } else {
-      // ➕ Vérifie si le user existe dans users_web
-      const user = loginData.user;
-      const { data: existing } = await supabase
-        .from("users_web")
-        .select("*")
-        .eq("id", user.id)
-        .maybeSingle();
+    // Connexion avec Google
+    const googleBtn = document.getElementById("google-login");
+    googleBtn.addEventListener("click", async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + "/dashboard.html"
+        }
+      });
 
-      if (!existing) {
-        await supabase.from("users_web").insert({
-          id: user.id,
-          email: user.email,
-          pseudo: user.user_metadata?.full_name || '',
-          Plan: "Free",
-          used_free_trial: false
-        });
-      }
-
-      // 🔁 Redirection
-      window.location.href = "dashboard.html";
-    }
-  });
-</script>
+      if (error) alert("Erreur Google : " + error.message);
+    });
+  </script>
+</body>
+</html>
