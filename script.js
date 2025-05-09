@@ -13,15 +13,11 @@ const loadUserData = async () => {
   const user = session.user
   document.getElementById('user-email').textContent = user.email
 
-  const { data: userData, error: userError } = await supabase
+  const { data: userData } = await supabase
     .from('users_web')
     .select('*')
     .eq('id', user.id)
     .single()
-
-  if (userError) {
-    console.error("❌ Erreur lecture users_web :", userError.message)
-  }
 
   if (userData) {
     document.getElementById('user-pseudo').textContent = userData.pseudo || '-'
@@ -43,22 +39,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const email = document.getElementById('email').value
       const password = document.getElementById('password').value
 
-      const { data: signupData, error: signupError } = await supabase.auth.signUp({ email, password })
+      const { error: signupError } = await supabase.auth.signUp({ email, password })
       if (signupError) return alert('Erreur : ' + signupError.message)
 
-      const user = signupData.user
-      if (user) {
-        const { error: insertError } = await supabase.from('users_web').insert({
-          id: user.id,
-          email,
-          pseudo,
-          Plan: 'Free',
-          used_free_trial: false
-        })
+      await supabase.auth.signOut()
 
-        if (insertError) console.error("❌ Erreur insert (signup) :", insertError.message)
-        else console.log("✅ Signup insert OK")
-      }
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+      if (loginError) return alert('Erreur login après signup : ' + loginError.message)
 
       window.location.href = 'dashboard.html'
     })
@@ -96,6 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
+  // ⚡ Partie exécutée quand on arrive sur le dashboard
   if (window.location.pathname.includes('dashboard.html')) {
     const { data: sessionData } = await supabase.auth.getSession()
     const session = sessionData?.session
@@ -105,64 +93,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = userData?.user
     if (!user) return
 
-    const pseudo = user.user_metadata?.name || user.user_metadata?.full_name || ''
-    const email = user.email
-
-    const { data: existing, error: existingError } = await supabase
+    const { data: existing } = await supabase
       .from('users_web')
       .select('*')
       .eq('id', user.id)
       .maybeSingle()
 
-    if (existingError) {
-      console.error("❌ Erreur SELECT users_web :", existingError.message)
-    }
-
     if (!existing) {
-      const { error: insertError } = await supabase.from('users_web').insert({
+      const insertResponse = await supabase.from('users_web').insert({
         id: user.id,
-        email,
-        pseudo,
+        email: user.email,
+        pseudo: user.user_metadata?.full_name || user.user_metadata?.name || '',
         Plan: 'Free',
         used_free_trial: false
       })
 
-      if (insertError) {
-        console.error("❌ Erreur insert (Google) :", insertError.message)
+      if (insertResponse.error) {
+        console.error('❌ Erreur insertion :', insertResponse.error.message)
       } else {
-        console.log("✅ Google insert OK")
+        console.log('✅ Utilisateur inséré automatiquement')
       }
     } else {
-      console.log("ℹ️ Utilisateur déjà présent dans users_web")
+      console.log('ℹ️ Utilisateur déjà présent dans users_web')
     }
 
     await loadUserData()
-
-    // ✅ Formulaire de mise à jour du pseudo ou email
-    const updateForm = document.getElementById('update-form')
-    if (updateForm) {
-      updateForm.addEventListener('submit', async (e) => {
-        e.preventDefault()
-        const newPseudo = document.getElementById('new-pseudo').value
-        const newEmail = document.getElementById('new-email').value
-        const updates = {}
-        if (newPseudo) updates.pseudo = newPseudo
-        if (newEmail) updates.email = newEmail
-
-        const { error: updateError } = await supabase
-          .from('users_web')
-          .update(updates)
-          .eq('id', user.id)
-
-        if (updateError) {
-          console.error("❌ Erreur UPDATE :", updateError.message)
-          document.getElementById('update-status').textContent = '❌ Erreur : ' + updateError.message
-        } else {
-          console.log("✅ UPDATE effectué")
-          document.getElementById('update-status').textContent = '✅ Informations mises à jour'
-          await loadUserData()
-        }
-      })
-    }
   }
 })
