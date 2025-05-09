@@ -2,9 +2,10 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const supabase = createClient(
   'https://jgdsbsgajoidkqiwndnp.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...REMPLACE_PAR_TON_VRAI_TOKEN...'
 )
 
+// 🔁 Charge les données du dashboard
 const loadUserData = async () => {
   const { data: sessionData } = await supabase.auth.getSession()
   const session = sessionData.session
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const googleBtn = document.getElementById('google-login') || document.getElementById('google-signup')
   const logoutBtn = document.getElementById('logout')
 
+  // ✅ SIGNUP
   if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault()
@@ -39,30 +41,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       const email = document.getElementById('email').value
       const password = document.getElementById('password').value
 
-      const { error: signupError } = await supabase.auth.signUp({ email, password })
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({ email, password })
       if (signupError) return alert('Erreur : ' + signupError.message)
 
-      await supabase.auth.signOut()
-      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-      if (loginError) return alert('Erreur login après signup : ' + loginError.message)
-
-      const user = loginData.user
+      const user = signupData.user
       if (user) {
-        const { error: insertError } = await supabase.from('users_web').insert({
+        await supabase.from('users_web').insert({
           id: user.id,
-          email: user.email,
+          email,
           pseudo,
           Plan: 'Free',
           used_free_trial: false
         })
-
-        if (insertError) console.error('Erreur insert :', insertError.message)
       }
 
       window.location.href = 'dashboard.html'
     })
   }
 
+  // ✅ LOGIN
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault()
@@ -76,6 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
+  // ✅ GOOGLE LOGIN
   if (googleBtn) {
     googleBtn.addEventListener('click', async () => {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -88,6 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
+  // ✅ LOGOUT
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       await supabase.auth.signOut()
@@ -95,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
+  // ✅ AUTO INSERT/APPLY si dashboard
   if (window.location.pathname.includes('dashboard.html')) {
     const { data: sessionData } = await supabase.auth.getSession()
     const session = sessionData?.session
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .maybeSingle()
 
     if (!existing) {
-      const { error: insertError } = await supabase.from('users_web').insert({
+      const insert = await supabase.from('users_web').insert({
         id: user.id,
         email: user.email,
         pseudo: user.user_metadata?.name || user.user_metadata?.full_name || '',
@@ -119,14 +119,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         used_free_trial: false
       })
 
-      if (insertError) console.error("❌ Erreur insertion :", insertError.message)
-    } else if (!existing.pseudo) {
-      await supabase
-        .from('users_web')
-        .update({
-          pseudo: user.user_metadata?.name || user.user_metadata?.full_name || ''
-        })
-        .eq('id', user.id)
+      if (insert.error) {
+        console.error("❌ Erreur insert :", insert.error.message)
+      } else {
+        console.log("✅ Utilisateur inséré")
+      }
+    } else {
+      console.log("ℹ️ Utilisateur déjà présent")
     }
 
     await loadUserData()
