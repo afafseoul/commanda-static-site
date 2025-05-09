@@ -5,7 +5,7 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
 );
 
-// === BOUTON GOOGLE LOGIN ===
+// === LOGIN ===
 const googleLoginBtn = document.getElementById("google-login");
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener("click", async () => {
@@ -22,7 +22,19 @@ const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
   (async () => {
-    // Attente de la session
+    // 1. Si URL contient un access_token (via Google OAuth), on valide la session via l’URL
+    const hash = window.location.hash;
+    if (hash.includes("access_token")) {
+      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+      if (error) {
+        console.error("Erreur d’échange de session :", error.message);
+        return;
+      }
+      // Nettoie l’URL
+      window.history.replaceState({}, document.title, "/dashboard.html");
+    }
+
+    // 2. Maintenant qu'on est sûr d’avoir échangé le token, on récupère la session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (!session || sessionError) {
       console.warn("Utilisateur non authentifié ou session absente", sessionError);
@@ -32,7 +44,7 @@ if (emailEl && pseudoEl && planEl && trialEl) {
     const user = session.user;
     emailEl.textContent = user.email;
 
-    // Vérifie si le user existe déjà dans users_web
+    // 3. Vérifie si l'utilisateur existe déjà dans users_web
     const { data: existing, error: fetchError } = await supabase
       .from("users_web")
       .select("*")
@@ -57,7 +69,6 @@ if (emailEl && pseudoEl && planEl && trialEl) {
     }
   })();
 
-  // Déconnexion
   const logoutBtn = document.getElementById("logout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
