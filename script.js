@@ -2,7 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const supabase = createClient(
   'https://jgdsbsgajoidkqiwndnp.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNDg4NDcsImV4cCI6MjA2MTgyNDg0N30.7h5X4HUlX2hylPpcJfRxPeHezJYlPommJZIYLbu1kSY'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 )
 
 const loadUserData = async () => {
@@ -43,27 +43,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (signupError) return alert('Erreur : ' + signupError.message)
 
       await supabase.auth.signOut()
-
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
       if (loginError) return alert('Erreur login après signup : ' + loginError.message)
 
       const user = loginData.user
       if (user) {
-        const payload = {
+        const { error: insertError } = await supabase.from('users_web').insert({
           id: user.id,
           email: user.email,
           pseudo,
           Plan: 'Free',
           used_free_trial: false
-        }
-        console.log("📦 Données envoyées à users_web (signup) :", payload)
+        })
 
-        const { error: insertError } = await supabase.from('users_web').insert(payload)
-        if (insertError) {
-          console.error("❌ Erreur insertion signup :", insertError.message)
-        } else {
-          console.log("✅ Utilisateur manuel inséré dans users_web")
-        }
+        if (insertError) console.error('Erreur insert :', insertError.message)
       }
 
       window.location.href = 'dashboard.html'
@@ -109,16 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const { data: userData } = await supabase.auth.getUser()
     const user = userData?.user
-
-    if (!user) {
-      console.warn("⚠️ Aucun utilisateur détecté via getUser()")
-      return
-    }
-
-    console.log("🧠 USER =", user)
-    console.log("📧 EMAIL =", user?.email)
-    console.log("👤 PSEUDO (name) =", user?.user_metadata?.name)
-    console.log("👤 PSEUDO (full_name) =", user?.user_metadata?.full_name)
+    if (!user) return
 
     const { data: existing } = await supabase
       .from('users_web')
@@ -127,35 +111,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       .maybeSingle()
 
     if (!existing) {
-      const payload = {
+      const { error: insertError } = await supabase.from('users_web').insert({
         id: user.id,
         email: user.email,
         pseudo: user.user_metadata?.name || user.user_metadata?.full_name || '',
         Plan: 'Free',
         used_free_trial: false
-      }
+      })
 
-      console.log("📦 Données envoyées à users_web (Google) :", payload)
-
-      const { error: insertError } = await supabase.from('users_web').insert(payload)
-      if (insertError) {
-        console.error("❌ Erreur insertion Google :", insertError.message)
-      } else {
-        console.log("✅ Utilisateur Google inséré dans users_web")
-      }
+      if (insertError) console.error("❌ Erreur insertion :", insertError.message)
     } else if (!existing.pseudo) {
-      const { error: updateError } = await supabase
+      await supabase
         .from('users_web')
         .update({
           pseudo: user.user_metadata?.name || user.user_metadata?.full_name || ''
         })
         .eq('id', user.id)
-
-      if (updateError) {
-        console.error("❌ Erreur mise à jour du pseudo :", updateError.message)
-      } else {
-        console.log("✅ Pseudo mis à jour pour utilisateur existant")
-      }
     }
 
     await loadUserData()
