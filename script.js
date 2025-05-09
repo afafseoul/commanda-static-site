@@ -42,10 +42,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { error: signupError } = await supabase.auth.signUp({ email, password })
       if (signupError) return alert('Erreur : ' + signupError.message)
 
-      // Déconnexion du compte Google actuel (au cas où)
       await supabase.auth.signOut()
 
-      // Connexion manuelle avec l'utilisateur qu'on vient de créer
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
       if (loginError) return alert('Erreur login après signup : ' + loginError.message)
 
@@ -99,31 +97,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.location.pathname.includes('dashboard.html')) {
     const { data: sessionData } = await supabase.auth.getSession()
     const session = sessionData?.session
-    const user = session?.user
+    if (!session) return
 
-    if (user) {
-      const { data: existing } = await supabase
+    // ✅ Nouvelle récupération propre du user
+    const { data: userData } = await supabase.auth.getUser()
+    const user = userData?.user
+    if (!user) return
+
+    const { data: existing } = await supabase
+      .from('users_web')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (!existing) {
+      await supabase.from('users_web').insert({
+        id: user.id,
+        email: user.email,
+        pseudo: user.user_metadata?.name || user.user_metadata?.full_name || '',
+        Plan: 'Free',
+        used_free_trial: false
+      })
+    } else if (!existing.pseudo) {
+      await supabase
         .from('users_web')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (!existing) {
-        await supabase.from('users_web').insert({
-          id: user.id,
-          email: user.email,
-          pseudo: user.user_metadata?.name || '',
-          Plan: 'Free',
-          used_free_trial: false
+        .update({
+          pseudo: user.user_metadata?.name || user.user_metadata?.full_name || ''
         })
-      } else {
-        if (!existing.pseudo) {
-          await supabase
-            .from('users_web')
-            .update({ pseudo: user.user_metadata?.name || '' })
-            .eq('id', user.id)
-        }
-      }
+        .eq('id', user.id)
     }
 
     await loadUserData()
