@@ -1,15 +1,15 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const supabase = createClient(
   'https://jgdsbsgajoidkqiwndnp.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZHNic2dham9pZGtxaXduZG5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUwOTA4MTMsImV4cCI6MjAyMDY2NjgxM30.y25cXK8kuOlLDnbcrAnwXQ2UhhOpV3NuIXkNrrRZ5g'
 );
 
-// Bouton Google
+// BOUTON LOGIN GOOGLE
 const googleLoginBtn = document.getElementById("google-login");
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener("click", async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
     if (error) alert("Erreur OAuth : " + error.message);
   });
 }
@@ -22,9 +22,6 @@ const trialEl = document.getElementById("user-trial");
 
 if (emailEl && pseudoEl && planEl && trialEl) {
   (async () => {
-    // ✅ Capture du token OAuth depuis URL (v2 = exchangeCodeForSession)
-    await supabase.auth.exchangeCodeForSession();
-
     const {
       data: { session },
       error: sessionError
@@ -38,26 +35,36 @@ if (emailEl && pseudoEl && planEl && trialEl) {
     const user = session.user;
     emailEl.textContent = user.email;
 
-    const { data, error: fetchError } = await supabase
+    const { data: existing, error: fetchError } = await supabase
       .from("users_web")
       .select("*")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (fetchError) {
-      console.error("Erreur DB :", fetchError);
-    } else if (data) {
-      pseudoEl.textContent = data.pseudo || "-";
-      planEl.textContent = data.Plan || "-";
-      trialEl.textContent = data.used_free_trial ? "Oui" : "Non";
+    if (!existing) {
+      await supabase.from("users_web").insert({
+        id: user.id,
+        email: user.email,
+        pseudo: user.user_metadata?.full_name || '',
+        Plan: "Free",
+        used_free_trial: false
+      });
+      planEl.textContent = "Free";
+      pseudoEl.textContent = user.user_metadata?.full_name || '';
+      trialEl.textContent = "Non";
+    } else {
+      pseudoEl.textContent = existing.pseudo || "-";
+      planEl.textContent = existing.Plan || "-";
+      trialEl.textContent = existing.used_free_trial ? "Oui" : "Non";
     }
   })();
+}
 
-  const logoutBtn = document.getElementById("logout");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "/signup.html";
-    });
-  }
+// BOUTON DECONNEXION
+const logoutBtn = document.getElementById("logout");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/signup.html";
+  });
 }
