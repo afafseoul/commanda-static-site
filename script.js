@@ -88,6 +88,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (window.location.pathname.includes('dashboard.html')) {
-    loadUserData()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const session = sessionData?.session
+    const user = session?.user
+
+    if (user) {
+      const { data: existing } = await supabase
+        .from('users_web')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!existing) {
+        await supabase.from('users_web').insert({
+          id: user.id,
+          email: user.email,
+          pseudo: user.user_metadata?.name || '',
+          Plan: 'Free',
+          used_free_trial: false
+        })
+      }
+    }
+
+    await loadUserData()
   }
 })
