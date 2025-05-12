@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const googleLoginBtn = document.getElementById('google-login')
   const logoutBtn = document.getElementById('logout-btn')
 
-  // ✅ SIGNUP classique
+  // ✅ SIGNUP email/mot de passe
   if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault()
@@ -45,28 +45,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       const email = document.getElementById('email').value
       const password = document.getElementById('password').value
 
-      const { data: signupData, error: signupError } = await supabase.auth.signUp({ email, password })
+      localStorage.setItem('pending_pseudo', pseudo)
+
+      const { error: signupError } = await supabase.auth.signUp({ email, password })
       if (signupError) return alert('Erreur : ' + signupError.message)
 
-      const user = signupData.user
-      if (user) {
-        const { error: insertError } = await supabase.from('users_web').insert({
-          id: user.id,
-          email,
-          pseudo,
-          Plan: 'Free',
-          used_free_trial: false
-        })
-
-        if (insertError) console.error("❌ Erreur insert (signup) :", insertError.message)
-        else console.log("✅ Signup insert OK")
-      }
-
-      window.location.href = 'dashboard.html'
+      alert('Un email de confirmation t’a été envoyé. Vérifie ta boîte mail 📩')
+      window.location.href = 'login.html'
     })
   }
 
-  // ✅ LOGIN classique
+  // ✅ LOGIN email/mot de passe
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault()
@@ -105,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
-  // ✅ GESTION AUTOMATIQUE DANS DASHBOARD
+  // ✅ DASHBOARD : insert/update dans users_web
   if (window.location.pathname.includes('dashboard.html')) {
     const { data: sessionData } = await supabase.auth.getSession()
     const session = sessionData?.session
@@ -113,7 +102,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const user = session.user
     const email = user.email
-    const pseudo = user.user_metadata?.name || user.user_metadata?.full_name || 'Inconnu'
+    const pseudoGoogle = user.user_metadata?.name || user.user_metadata?.full_name || ''
+    const pseudoSignup = localStorage.getItem('pending_pseudo') || ''
+    const pseudo = pseudoSignup || pseudoGoogle || 'Inconnu'
 
     const { data: existingUser, error: selectError } = await supabase
       .from('users_web')
@@ -157,6 +148,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     }
+
+    // Nettoyage après premier login
+    localStorage.removeItem('pending_pseudo')
 
     await loadUserData()
   }
