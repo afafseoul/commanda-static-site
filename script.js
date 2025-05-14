@@ -34,19 +34,20 @@ const loadUserData = async () => {
 document.addEventListener('DOMContentLoaded', async () => {
   const signupForm = document.getElementById('signup-form')
   const loginForm = document.getElementById('login-form')
-  const googleLoginBtn = document.getElementById('google-login')
+  const googleLoginBtn = document.getElementById('google-login-btn')
   const logoutBtn = document.getElementById('logout-btn')
 
-  // ✅ SIGNUP email/mot de passe
+  // ✅ SIGNUP
   if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault()
+
       const pseudo = document.getElementById('pseudo').value
       const email = document.getElementById('email').value
       const password = document.getElementById('password').value
 
-      localStorage.setItem('pending_pseudo', pseudo)
       localStorage.setItem('pending_email', email)
+      localStorage.setItem('pending_pseudo', pseudo)
 
       const { error: signupError } = await supabase.auth.signUp({
         email,
@@ -55,16 +56,21 @@ document.addEventListener('DOMContentLoaded', async () => {
           data: {
             display_name: pseudo,
             full_name: pseudo
-          }
+          },
+          redirectTo: window.location.origin + '/login.html' // ✅ Redirection après email confirm
         }
       })
-      if (signupError) return alert('Erreur : ' + signupError.message)
+
+      if (signupError) {
+        alert('Erreur : ' + signupError.message)
+        return
+      }
 
       window.location.href = 'email-confirmation.html'
     })
   }
 
-  // ✅ LOGIN email/mot de passe
+  // ✅ LOGIN FORM
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault()
@@ -78,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
-  // ✅ LOGIN Google
+  // ✅ LOGIN GOOGLE
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -87,11 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           redirectTo: window.location.origin + '/dashboard.html'
         }
       })
-      if (error) {
-        console.error('Erreur Google :', error.message)
-      } else {
-        console.log('✅ Redirection vers Google OAuth...')
-      }
+      if (error) alert('Erreur Google : ' + error.message)
     })
   }
 
@@ -103,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
-  // ✅ DASHBOARD : insert/update dans users_web
+  // ✅ DASHBOARD : insert ou mise à jour dans users_web
   if (window.location.pathname.includes('dashboard.html')) {
     const { data: sessionData } = await supabase.auth.getSession()
     const session = sessionData?.session
