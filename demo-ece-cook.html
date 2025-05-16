@@ -1,94 +1,59 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demo Meta - ECE COOK</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connexion Meta - ECE COOK</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 2rem;
-      color: #333;
-    }
-    .container {
-      background: white;
-      border-radius: 10px;
-      padding: 2rem;
-      max-width: 600px;
-      margin: auto;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-    }
-    h1, h2 {
-      color: #4a4a4a;
-    }
-    .button {
-      display: inline-block;
-      padding: 0.6rem 1.2rem;
-      margin: 1rem 0;
-      background-color: #1877f2;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    .info-box {
-      background: #eef3fc;
-      padding: 1rem;
-      margin: 1rem 0;
-      border-left: 5px solid #1877f2;
-    }
-    .fake-section {
-      background: #fafafa;
-      border: 1px solid #ddd;
-      padding: 1rem;
-      border-radius: 5px;
-      margin-top: 1.5rem;
-    }
+    body { padding: 2rem; }
+    .box { padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+    .highlight { color: #d6336c; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Connexion via Meta (démo)</h1>
+  <main class="container">
+    <h2>Connexion via Meta (démo)</h2>
 
-    <button class="button" onclick="connectMeta()">Connexion avec Meta</button>
+    <a href="https://www.facebook.com/v19.0/dialog/oauth?client_id=2883439835182858&redirect_uri=https://cozy-maamoul-92d86f.netlify.app/demo-ece-cook.html&response_type=token&scope=pages_show_list,pages_manage_posts,instagram_basic,pages_manage_engagement" class="contrast button">Connexion avec Meta</a>
 
-    <div class="info-box">
-      ⚠️ Ceci est une démonstration statique pour la validation Meta. Les données affichées sont fictives, sauf le flux d'autorisation Meta qui est réel.
+    <p style="background-color:#eef2ff;padding:1rem;border-radius:6px;margin-top:1rem;">
+      🚨 Ceci est une démonstration statique pour la validation Meta. Les données affichées sont fictives, sauf le flux d'autorisation Meta qui est réel.
+    </p>
+
+    <div class="box">
+      <h4>Page connectée : <span class="highlight">ECE COOK</span></h4>
+      <p>ID : <code>100878791677711</code></p>
     </div>
 
-    <div id="connected" style="display:none;">
-      <h2>Page connectée : ECE COOK</h2>
-      <p>ID : <strong>100878791677711</strong></p>
-
-      <div class="fake-section">
-        <h3>Commentaires récents :</h3>
-        <ul>
-          <li>@foodie123 : "Incroyable ce plat ! 🤤"</li>
-          <li>@julie_cook : "C'est où votre resto ? 😍"</li>
-        </ul>
-        <button class="button">Répondre automatiquement</button>
-      </div>
-
-      <div class="fake-section">
-        <h3>Plan d'abonnement</h3>
-        <p>Plan actif : <strong>Starter</strong></p>
-        <p>Réponses restantes : 134</p>
-        <p>Dernier post traité : il y a 3h</p>
-      </div>
+    <div class="box">
+      <h4>Commentaires récents :</h4>
+      <ul>
+        <li>@foodie123 : "Incroyable ce plat ! 😍"</li>
+        <li>@julie_cook : "C'est où votre resto ? 🍽️"</li>
+      </ul>
+      <p><em>⚠️ Les réponses sont envoyées automatiquement dès qu'un commentaire est détecté.</em></p>
     </div>
-  </div>
 
-  <script>
-    function connectMeta() {
-      alert("Redirection vers Meta OAuth en cours... (simulation)");
-      // Simuler le retour de Meta
-      setTimeout(() => {
-        document.getElementById("connected").style.display = "block";
-      }, 1000);
-    }
-  </script>
+    <div class="box">
+      <h4>Plan d'abonnement</h4>
+      <p><strong>Plan actif :</strong> Starter</p>
+      <p><strong>Nombre de pages connectées :</strong> 1/1 (ECE COOK)</p>
+      <p><strong>Prix total de l'abonnement :</strong> 9€/mois</p>
+      <p><strong>Réponses restantes :</strong> 134</p>
+      <p><strong>Dernier post traité :</strong> il y a 3h</p>
+    </div>
+
+    <div class="box">
+      <h4>Simulation de facturation dynamique</h4>
+      <p>Si vous ajoutez plus de pages Instagram lors de la connexion Meta, le tarif sera ajusté automatiquement.</p>
+      <ul>
+        <li>1 page : 9€/mois</li>
+        <li>2 pages : 18€/mois</li>
+        <li>3 pages : 27€/mois</li>
+      </ul>
+    </div>
+
+  </main>
 </body>
 </html>
