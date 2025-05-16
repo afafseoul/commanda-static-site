@@ -2,117 +2,182 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Demo Meta - ECE COOK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Démo Connexion Meta – ECE COOK</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f9fafb;
+      background-color: #f9f9fb;
       margin: 0;
-      padding: 2rem;
-      color: #333;
-      font-size: 1.05rem;
+      padding: 0;
     }
-    .container {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      max-width: 700px;
+    header {
+      background-color: #715bff;
+      color: white;
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+    main {
+      max-width: 960px;
       margin: auto;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+      padding: 2rem;
     }
-    h1, h2, h3 {
-      color: #1f2937;
+    .section {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
+      padding: 1.5rem 2rem;
     }
     .button {
-      display: inline-block;
-      padding: 0.6rem 1.2rem;
-      margin: 1rem 0;
-      background-color: #1877f2;
+      background-color: #246bfd;
       color: white;
+      padding: 10px 18px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
       font-size: 1rem;
-      text-decoration: none;
+      margin-top: 1rem;
     }
-    .info-box {
-      background: #e0e7ff;
-      padding: 1rem;
-      margin: 1.2rem 0;
-      border-left: 5px solid #4338ca;
+    .meta-info {
+      background-color: #eef3ff;
+      padding: 0.8rem 1rem;
+      border-left: 5px solid #246bfd;
+      margin-top: 1rem;
       border-radius: 6px;
+      font-size: 0.95rem;
     }
-    .fake-section {
-      background: #f4f4f5;
-      padding: 1rem;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.95rem;
+    }
+    th {
+      background-color: #f5f5f5;
+      font-weight: 600;
+    }
+    img.post-img {
+      width: 45px;
+      height: 45px;
       border-radius: 6px;
-      margin-top: 1.5rem;
-      border: 1px solid #e5e7eb;
+      object-fit: cover;
     }
-    ul {
-      padding-left: 1.2rem;
-    }
-    li {
-      margin-bottom: 0.5rem;
-    }
-    code {
-      background: #f3f4f6;
-      padding: 0.2rem 0.4rem;
-      border-radius: 4px;
+    .tag {
+      background: #ddd;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 0.8rem;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Connexion via Meta (démo)</h1>
 
-    <a
-      href="https://www.facebook.com/v19.0/dialog/oauth?client_id=2883439835182858&redirect_uri=https%3A%2F%2Fcozy-maamoul-92d86f.netlify.app%2Fdemo-ece-cook&response_type=token&scope=pages_show_list,instagram_basic,pages_manage_posts,pages_read_engagement,pages_manage_engagement"
-      class="button"
-    >Connexion avec Meta</a>
+<header>
+  @ece_cook
+</header>
 
-    <div class="info-box">
-      ✅ Ceci est une démonstration statique de notre interface client après connexion Meta. Le contenu est fictif, mais la permission <code>pages_show_list</code> est réellement utilisée.
-    </div>
-
-    <div>
-      <h2>Page connectée : <strong>ECE COOK</strong></h2>
-      <p>ID de la page : <code>100878791677711</code></p>
-    </div>
-
-    <div class="fake-section">
-      <h3>Commentaires récents</h3>
-      <ul>
-        <li><strong>@foodie123</strong> : "Incroyable ce plat ! 😋"</li>
-        <li><strong>@julie_cook</strong> : "C'est où votre resto ? 😍"</li>
-      </ul>
-      <p><em>💡 Les réponses sont envoyées automatiquement dès qu'un commentaire est détecté.</em></p>
-    </div>
-
-    <div class="fake-section">
-      <h3>Plan d'abonnement</h3>
-      <p><strong>Plan actif :</strong> Starter</p>
-      <p><strong>Nombre de pages connectées :</strong> 1 / 1</p>
-      <p><strong>Réponses restantes :</strong> 134</p>
-      <p><strong>Dernier post traité :</strong> il y a 3h</p>
-    </div>
-
-    <div class="fake-section">
-      <h3>Facturation dynamique</h3>
-      <p>Notre système ajuste automatiquement la facturation selon le nombre de pages Meta connectées :</p>
-      <ul>
-        <li>1 page : 9€/mois</li>
-        <li>2 pages : 18€/mois</li>
-        <li>3 pages : 27€/mois</li>
-        <li>Etc.</li>
-      </ul>
-      <p><em>💡 Si votre plan inclut jusqu’à 5 pages mais que vous n’en connectez que 3, vous ne paierez qu’un seul abonnement.</em></p>
-    </div>
-
-    <div class="info-box" style="background:#fff7ed; border-left-color:#f97316; color:#92400e;">
-      🎥 Cette page est une simulation pour la validation Meta. Une voix off dans la vidéo précisera que cette interface représente le comportement final prévu après validation.
+<main>
+  <div class="section">
+    <h2>Offre sélectionnée : <span class="tag">Starter</span></h2>
+    <p>1 compte Instagram – Jusqu’à 10 commentaires/post – Réponses IA automatiques</p>
+    <p><strong>Prix :</strong> 9€ / mois</p>
+    <button class="button" onclick="location.href='https://www.facebook.com/v19.0/dialog/oauth?client_id=2883439835182858&redirect_uri=https://instagram-webhook-listener.onrender.com/&scope=pages_show_list,instagram_basic,instagram_manage_comments,pages_read_engagement&response_type=code&state=CLIENT_ID_UNIQUE'">
+      Connexion avec Meta
+    </button>
+    <div class="meta-info">
+      🔒 Ceci est une démonstration statique. La connexion Meta est réelle, mais les données affichées sont fictives.
     </div>
   </div>
+
+  <div class="section">
+    <h2>Page connectée : ECE COOK</h2>
+    <p><strong>ID de la page :</strong> 100878791677711</p>
+    <p><strong>Nombre de pages connectées :</strong> 1 / 1</p>
+    <p><strong>Réponses restantes :</strong> 134</p>
+    <p><strong>Dernier post traité :</strong> il y a 3h</p>
+  </div>
+
+  <div class="section">
+    <h2>Vos Posts</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Post</th>
+          <th>Date</th>
+          <th>ID</th>
+          <th>Légende</th>
+          <th>Likes</th>
+          <th>Commentaires</th>
+          <th>Taux d’engagement</th>
+          <th>Auto-reply (max)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><img src="https://i.imgur.com/rqAf3fj.jpeg" class="post-img" /></td>
+          <td>03/05/2025</td>
+          <td>post001</td>
+          <td>Risotto aux truffes 😍</td>
+          <td>340</td>
+          <td>27</td>
+          <td>15.3%</td>
+          <td>10</td>
+        </tr>
+        <tr>
+          <td><img src="https://i.imgur.com/pYy0P8c.jpeg" class="post-img" /></td>
+          <td>01/05/2025</td>
+          <td>post002</td>
+          <td>Tartare de saumon 🍣</td>
+          <td>270</td>
+          <td>38</td>
+          <td>17.9%</td>
+          <td>10</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Commentaires & Réponses automatiques</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Post</th>
+          <th>Date</th>
+          <th>Utilisateur</th>
+          <th>Commentaire</th>
+          <th>Réponse IA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><img src="https://i.imgur.com/rqAf3fj.jpeg" class="post-img" /></td>
+          <td>03/05/2025</td>
+          <td>@foodie_lover</td>
+          <td>Incroyable ce plat 😍</td>
+          <td>Merci beaucoup ! C’est une de nos spécialités 🤗</td>
+        </tr>
+        <tr>
+          <td><img src="https://i.imgur.com/pYy0P8c.jpeg" class="post-img" /></td>
+          <td>01/05/2025</td>
+          <td>@julie_food</td>
+          <td>C’est où ce resto ?</td>
+          <td>On est à Paris 16 ! 😊</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="text-align:center; color:gray; font-size:0.85rem; margin-top:3rem;">© 2025 Commanda – Tous droits réservés</p>
+</main>
+
 </body>
 </html>
