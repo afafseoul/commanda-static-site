@@ -3,57 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Connexion Meta - ECE COOK</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <title>Demo Meta - ECE COOK</title>
   <style>
-    body { padding: 2rem; }
-    .box { padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.1); margin-bottom: 2rem; }
-    .highlight { color: #d6336c; font-weight: bold; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9fafb;
+      margin: 0;
+      padding: 2rem;
+      color: #333;
+      font-size: 1.05rem;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 700px;
+      margin: auto;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    }
+    h1, h2, h3 {
+      color: #1f2937;
+    }
+    .button {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      margin: 1rem 0;
+      background-color: #1877f2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      text-decoration: none;
+    }
+    .info-box {
+      background: #e0e7ff;
+      padding: 1rem;
+      margin: 1.2rem 0;
+      border-left: 5px solid #4338ca;
+      border-radius: 6px;
+    }
+    .fake-section {
+      background: #f4f4f5;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-top: 1.5rem;
+      border: 1px solid #e5e7eb;
+    }
+    ul {
+      padding-left: 1.2rem;
+    }
+    li {
+      margin-bottom: 0.5rem;
+    }
+    code {
+      background: #f3f4f6;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
-  <main class="container">
-    <h2>Connexion via Meta (démo)</h2>
+  <div class="container">
+    <h1>Connexion via Meta (démo)</h1>
 
-    <a href="https://www.facebook.com/v19.0/dialog/oauth?client_id=2883439835182858&redirect_uri=https://cozy-maamoul-92d86f.netlify.app/demo-ece-cook.html&response_type=token&scope=pages_show_list,pages_manage_posts,instagram_basic,pages_manage_engagement" class="contrast button">Connexion avec Meta</a>
+    <a
+      href="https://www.facebook.com/v19.0/dialog/oauth?client_id=2883439835182858&redirect_uri=https%3A%2F%2Fcozy-maamoul-92d86f.netlify.app%2Fdemo-ece-cook&response_type=token&scope=pages_show_list,instagram_basic,pages_manage_posts,pages_read_engagement,pages_manage_engagement"
+      class="button"
+    >Connexion avec Meta</a>
 
-    <p style="background-color:#eef2ff;padding:1rem;border-radius:6px;margin-top:1rem;">
-      🚨 Ceci est une démonstration statique pour la validation Meta. Les données affichées sont fictives, sauf le flux d'autorisation Meta qui est réel.
-    </p>
-
-    <div class="box">
-      <h4>Page connectée : <span class="highlight">ECE COOK</span></h4>
-      <p>ID : <code>100878791677711</code></p>
+    <div class="info-box">
+      ✅ Ceci est une démonstration statique de notre interface client après connexion Meta. Le contenu est fictif, mais la permission <code>pages_show_list</code> est réellement utilisée.
     </div>
 
-    <div class="box">
-      <h4>Commentaires récents :</h4>
+    <div>
+      <h2>Page connectée : <strong>ECE COOK</strong></h2>
+      <p>ID de la page : <code>100878791677711</code></p>
+    </div>
+
+    <div class="fake-section">
+      <h3>Commentaires récents</h3>
       <ul>
-        <li>@foodie123 : "Incroyable ce plat ! 😍"</li>
-        <li>@julie_cook : "C'est où votre resto ? 🍽️"</li>
+        <li><strong>@foodie123</strong> : "Incroyable ce plat ! 😋"</li>
+        <li><strong>@julie_cook</strong> : "C'est où votre resto ? 😍"</li>
       </ul>
-      <p><em>⚠️ Les réponses sont envoyées automatiquement dès qu'un commentaire est détecté.</em></p>
+      <p><em>💡 Les réponses sont envoyées automatiquement dès qu'un commentaire est détecté.</em></p>
     </div>
 
-    <div class="box">
-      <h4>Plan d'abonnement</h4>
+    <div class="fake-section">
+      <h3>Plan d'abonnement</h3>
       <p><strong>Plan actif :</strong> Starter</p>
-      <p><strong>Nombre de pages connectées :</strong> 1/1 (ECE COOK)</p>
-      <p><strong>Prix total de l'abonnement :</strong> 9€/mois</p>
+      <p><strong>Nombre de pages connectées :</strong> 1 / 1</p>
       <p><strong>Réponses restantes :</strong> 134</p>
       <p><strong>Dernier post traité :</strong> il y a 3h</p>
     </div>
 
-    <div class="box">
-      <h4>Simulation de facturation dynamique</h4>
-      <p>Si vous ajoutez plus de pages Instagram lors de la connexion Meta, le tarif sera ajusté automatiquement.</p>
+    <div class="fake-section">
+      <h3>Facturation dynamique</h3>
+      <p>Notre système ajuste automatiquement la facturation selon le nombre de pages Meta connectées :</p>
       <ul>
         <li>1 page : 9€/mois</li>
         <li>2 pages : 18€/mois</li>
         <li>3 pages : 27€/mois</li>
+        <li>Etc.</li>
       </ul>
+      <p><em>💡 Si votre plan inclut jusqu’à 5 pages mais que vous n’en connectez que 3, vous ne paierez qu’un seul abonnement.</em></p>
     </div>
 
-  </main>
+    <div class="info-box" style="background:#fff7ed; border-left-color:#f97316; color:#92400e;">
+      🎥 Cette page est une simulation pour la validation Meta. Une voix off dans la vidéo précisera que cette interface représente le comportement final prévu après validation.
+    </div>
+  </div>
 </body>
 </html>
